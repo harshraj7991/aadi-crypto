@@ -9,8 +9,9 @@ export function DemoNotice({ compact = false }: { compact?: boolean }) {
       <div className="flex items-start gap-2.5">
         <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover" />
         <p className="text-[13px] leading-relaxed">
-          <strong>Fictional demo content.</strong> Stories, prices, dates, people and quotes on this
-          page are illustrative placeholders—not current reporting or financial advice.
+          <strong>Fictional demo content.</strong> Stories, dates, people and quotes on this page
+          are illustrative placeholders—not current reporting or financial advice. The market
+          figures in the header strip are live; prices shown inside the page are still demo data.
         </p>
       </div>
     </aside>

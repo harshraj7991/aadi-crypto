@@ -3,10 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { Bell, Briefcase, Menu, Search, Star, X } from "lucide-react";
 import logo from "@/assets/aadicrypto-logo.png";
 import { labelLink, SiteLink, storyLink } from "./links";
-import { coins, globalStats } from "@/data/market";
+import type { Currency } from "@/data/market";
+import type { MarketTicker } from "@/types/market";
 import { breaking } from "@/data/news";
-import { formatPrice } from "@/lib/format";
+import { formatCompact, formatPrice } from "@/lib/format";
 import { CurrencyToggle, useCurrency } from "./currency";
+import { useMarketTicker } from "./useMarketTicker";
 import { Delta } from "./Delta";
 import { MarketsMegaMenu, MarketsMobileList } from "./MarketsMegaMenu";
 
@@ -41,9 +43,44 @@ const moreNav = [
   "Glossary",
 ];
 
+type GlobalStat = { label: string; value: string; change: number | null };
+
+/** Turns the wire shape into the strings the utility strip shows. */
+function buildGlobalStats(ticker: MarketTicker, currency: Currency): GlobalStat[] {
+  const stats: GlobalStat[] = [
+    {
+      label: "Global Market Cap",
+      value: formatCompact(ticker.global.marketCap, currency),
+      change: ticker.global.marketCapChange24h,
+    },
+    // CoinGecko's global endpoint gives no 24h change for volume or dominance,
+    // so these show the value alone rather than an invented delta.
+    { label: "24h Volume", value: formatCompact(ticker.global.volume24h, currency), change: null },
+    { label: "BTC Dominance", value: `${ticker.global.btcDominance.toFixed(1)}%`, change: null },
+    { label: "ETH Dominance", value: `${ticker.global.ethDominance.toFixed(1)}%`, change: null },
+  ];
+
+  if (ticker.gas) {
+    stats.push({ label: "Gas", value: `${ticker.gas.gwei} gwei`, change: null });
+  }
+  if (ticker.fearGreed) {
+    const { value, label } = ticker.fearGreed;
+    stats.push({
+      label: "Fear & Greed",
+      value: label ? `${value} · ${label}` : `${value}`,
+      change: null,
+    });
+  }
+
+  return stats;
+}
+
 export function SiteHeader() {
   const [stuck, setStuck] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const ticker = useMarketTicker();
+  const { currency } = useCurrency();
+  const globalStats = buildGlobalStats(ticker, currency);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 120);
@@ -227,6 +264,7 @@ function IconButton({ label, children }: { label: string; children: React.ReactN
 
 function Ticker() {
   const { currency } = useCurrency();
+  const { coins } = useMarketTicker();
   return (
     <div className="border-b border-border bg-surface-cool">
       <div className="container-page scroll-x">

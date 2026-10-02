@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { fetchMarketTicker } from "@/lib/market-fn";
 import { CurrencyProvider } from "@/components/site/currency";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -77,6 +78,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // The header sits in this layout, so every page needs the market data. The
+  // source serves from cache and refreshes in the background, so this loader
+  // does not wait on CoinGecko.
+  loader: async () => ({ marketTicker: await fetchMarketTicker() }),
+
   head: () => ({
     meta: [
       { charSet: "utf-8" },
