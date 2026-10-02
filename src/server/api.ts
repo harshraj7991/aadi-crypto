@@ -23,9 +23,10 @@ export async function handleApiRequest(request: Request): Promise<Response | nul
     return new Response(JSON.stringify(ticker), {
       headers: {
         ...JSON_HEADERS,
-        // Ten seconds at the edge, then a minute where a stale copy is better
-        // than a slow one. Matches the worker's refresh interval.
-        "cache-control": "public, max-age=0, s-maxage=10, stale-while-revalidate=60",
+        // The edge serves this for a minute, then prefers a stale copy over a
+        // slow one for another five. This is what keeps upstream traffic flat
+        // no matter how many browsers are polling.
+        "cache-control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
       },
     });
   }

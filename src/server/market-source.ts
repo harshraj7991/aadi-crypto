@@ -1,45 +1,60 @@
 /**
  * Live market data: fetch, normalise, cache.
  *
- * One cache for the whole process. However many browsers are on the site, the
- * upstream APIs see at most one call per TTL window — that is the whole point
- * of routing prices through the server instead of calling CoinGecko from React.
+ * Whatever the audience, the upstream APIs see at most one call per TTL window
+ * per datacentre — that is the whole point of routing prices through the server
+ * instead of calling CoinGecko from React. The cache itself lives in
+ * `market-cache.ts`, which papers over the difference between a Node process
+ * and a Cloudflare isolate.
  *
- * Caching is stale-while-revalidate: once we hold any copy we return it
- * immediately and refresh in the background, so a slow or dead upstream never
- * blocks a page render. Redis replaces this cache the day we run more than one
- * Node process; the shape in `src/types/market.ts` does not change.
+ * Reads are stale-while-revalidate within a bounded window: once the copy we
+ * hold goes stale we hand it back immediately and refresh alongside, so a slow
+ * upstream never blocks a render. Past a hard ceiling we stop pretending and
+ * wait for fresh data, which keeps the worst case bounded even on Workers where
+ * work started after a response is not guaranteed to finish.
  *
  * Server only. Never import this from a component.
  */
 
 import { coins as demoCoins } from "@/data/market";
 import type { MarketTicker, TickerCoin } from "@/types/market";
+import { isEdgeRuntime, readCache, writeCache } from "./market-cache";
 
 /**
- * CoinGecko without a key is throttled per IP at roughly five to fifteen calls
- * a minute, which a ten-second refresh (two calls each) reliably exceeds — you
- * get 429s and the strip quietly falls back to the last good copy. A free demo
- * key lifts the ceiling to thirty a minute, which ten seconds fits inside.
- *
- * So the refresh matches whether a key is configured. The browser keeps polling
- * every ten seconds either way; without a key it simply gets more cache hits.
+ * On a Node process one cache serves everyone, so ten seconds is affordable.
+ * On Workers every active datacentre refreshes on its own, so the same ten
+ * seconds would multiply by the number of live datacentres and blow through
+ * CoinGecko's 30-a-minute allowance. A minute keeps the total safe either way.
  */
-const TICKER_TTL_MS = process.env["COINGECKO_API_KEY"] ? 10_000 : 30_000;
+const TICKER_TTL_MS = isEdgeRuntime() ? 60_000 : 10_000;
+
+/**
+ * How stale we will let a copy get while a refresh runs alongside. Past this we
+ * wait for fresh data instead — on Workers a refresh kicked off without being
+ * awaited may simply be cancelled, so without a ceiling the data could stick.
+ */
+const TICKER_HARD_MS = TICKER_TTL_MS * 3;
+
 const FEAR_GREED_TTL_MS = 60 * 60 * 1000; // the index only moves once a day
-const TRENDING_TTL_MS = 5 * 60 * 1000; // trending turns over in minutes, not seconds
+const TRENDING_TTL_MS = 10 * 60 * 1000; // trending turns over in minutes
 const SECTOR_TTL_MS = 6 * 60 * 60 * 1000; // which coins are "DeFi" barely changes
 const UPSTREAM_TIMEOUT_MS = 8_000;
 const SPARK_POINTS = 12;
 const COIN_COUNT = 100;
 
+const TICKER_KEY = "ticker";
+const FEAR_GREED_KEY = "fear-greed";
+const TRENDING_KEY = "trending";
+const SECTORS_KEY = "sectors";
+
 const COINGECKO = "https://api.coingecko.com/api/v3";
+const USER_AGENT = "AadiCrypto/1.0 (+https://github.com/harshraj7991/aadi-crypto)";
 
 /**
  * Sector tabs in the market table, mapped to CoinGecko category ids.
  *
- * Membership is fetched on its own six-hour clock, so these cost four calls
- * every six hours rather than four on every refresh.
+ * Six-hour cache, so these are four calls twice a day rather than four on every
+ * refresh.
  */
 const SECTORS: ReadonlyArray<{ tag: string; category: string }> = [
   { tag: "defi", category: "decentralized-finance-defi" },
@@ -49,9 +64,6 @@ const SECTORS: ReadonlyArray<{ tag: string; category: string }> = [
 ];
 
 const SECTOR_TAGS = new Set(SECTORS.map((sector) => sector.tag));
-
-/** Spacing between background calls, so they never arrive as a burst. */
-const METADATA_GAP_MS = 1_500;
 
 // ---------------------------------------------------------------- fallback
 
@@ -87,57 +99,44 @@ const DEMO_TICKER: MarketTicker = {
 
 // ------------------------------------------------------------------- cache
 
-type Slot<T> = { value: T; fetchedAt: number };
-
-let tickerCache: Slot<MarketTicker> | undefined;
-let fearGreedCache: Slot<MarketTicker["fearGreed"]> | undefined;
-let trendingCache: Slot<Set<string>> | undefined;
-let sectorCache: Slot<Map<string, string[]>> | undefined;
+/** Collapses a stampede inside one isolate. Across isolates the TTL does it. */
 let inFlight: Promise<MarketTicker> | undefined;
-let lastGood: MarketTicker | undefined;
 
 /**
- * The only entry point. Returns immediately whenever we already hold a copy,
- * refreshing in the background when that copy has aged out.
+ * The only entry point.
+ *
+ * Fresh copy  -> return it.
+ * Stale copy  -> return it and refresh alongside.
+ * Too stale, or nothing cached -> wait for fresh data.
  */
 export async function getMarketTicker(): Promise<MarketTicker> {
-  if (tickerCache) {
-    if (Date.now() - tickerCache.fetchedAt >= TICKER_TTL_MS) {
-      void refresh(); // stale-while-revalidate: nobody waits on this
+  const hit = await readCache<MarketTicker>(TICKER_KEY);
+
+  if (hit) {
+    const age = Date.now() - hit.fetchedAt;
+    if (age < TICKER_TTL_MS) return hit.value;
+    if (age < TICKER_HARD_MS) {
+      void refresh(hit.value); // not awaited: nobody waits on a warm cache
+      return { ...hit.value, stale: true };
     }
-    return tickerCache.value;
   }
-  return refresh();
+
+  return refresh(hit?.value);
 }
 
-/** Fire the first fetch at boot so the first visitor does not pay for it. */
-export function primeMarketTicker(): void {
-  // Never log the key itself — only whether one was found, and what that means
-  // for the refresh rate. Silent fallback to the slow path is hard to diagnose.
-  console.info(
-    `[market] CoinGecko key ${process.env["COINGECKO_API_KEY"] ? "configured" : "NOT set"}` +
-      ` — refreshing every ${TICKER_TTL_MS / 1000}s`,
-  );
-  void getMarketTicker();
-}
-
-function refresh(): Promise<MarketTicker> {
-  // Collapse a stampede: fifty simultaneous cold requests make one upstream call.
+function refresh(lastGood: MarketTicker | undefined): Promise<MarketTicker> {
   if (inFlight) return inFlight;
 
   inFlight = buildTicker()
-    .then((value) => {
-      tickerCache = { value, fetchedAt: Date.now() };
-      lastGood = value;
-      void refreshMetadata(); // background, deliberately not awaited
+    .then(async (value) => {
+      // Physical lifetime outlives the freshness window, so there is always
+      // something to serve while the next refresh runs.
+      await writeCache(TICKER_KEY, { value, fetchedAt: Date.now() }, (TICKER_HARD_MS / 1000) * 4);
       return value;
     })
     .catch((error: unknown) => {
       console.error("[market] upstream fetch failed, serving last known data:", error);
-      const fallback: MarketTicker = { ...(lastGood ?? DEMO_TICKER), stale: true };
-      // Hold the fallback for one TTL so a dead upstream is not hammered.
-      tickerCache = { value: fallback, fetchedAt: Date.now() };
-      return fallback;
+      return { ...(lastGood ?? DEMO_TICKER), stale: true };
     })
     .finally(() => {
       inFlight = undefined;
@@ -160,10 +159,9 @@ async function buildTicker(): Promise<MarketTicker> {
     fetchGas(),
   ]);
 
-  // Sector and trending labels are read from whatever the background refresh
-  // last stored. Empty on the very first build; filled within a few seconds.
-  const trending = trendingCache?.value ?? new Set<string>();
-  const sectors = sectorCache?.value ?? new Map<string, string[]>();
+  // Both sit behind long caches of their own, so these are nearly always cache
+  // reads rather than calls.
+  const [trending, sectors] = await Promise.all([getTrending(), getSectors()]);
 
   return {
     global: globals,
@@ -176,8 +174,8 @@ async function buildTicker(): Promise<MarketTicker> {
   };
 }
 
-function tagsFor(id: string, trending: Set<string>, sectors: Map<string, string[]>): string[] {
-  const tags = sectors.get(id) ?? [];
+function tagsFor(id: string, trending: Set<string>, sectors: Record<string, string[]>): string[] {
+  const tags = sectors[id] ?? [];
   return trending.has(id) ? ["trending", ...tags] : tags;
 }
 
@@ -252,96 +250,85 @@ async function fetchCoins(): Promise<Array<Omit<TickerCoin, "tags">>> {
 }
 
 /**
- * Background refresh for the slow-moving labels.
+ * Coins people are actually looking up right now.
  *
- * Runs after a successful ticker build, never as part of one, and strictly one
- * call at a time with a gap between them. Nothing here is awaited by a request,
- * so a rate limit or an outage costs an empty tab, never a slow page.
+ * Ten-minute cache. A failure returns an empty set, which just means no coin is
+ * tagged "trending" until the next attempt — never a failed page.
  */
-let metadataRefreshing = false;
+async function getTrending(): Promise<Set<string>> {
+  const hit = await readCache<string[]>(TRENDING_KEY);
+  if (hit && Date.now() - hit.fetchedAt < TRENDING_TTL_MS) return new Set(hit.value);
 
-async function refreshMetadata(): Promise<void> {
-  if (metadataRefreshing) return;
-  const now = Date.now();
-  const trendingDue = !trendingCache || now - trendingCache.fetchedAt >= TRENDING_TTL_MS;
-  const sectorsDue = !sectorCache || now - sectorCache.fetchedAt >= SECTOR_TTL_MS;
-  if (!trendingDue && !sectorsDue) return;
-
-  metadataRefreshing = true;
-  try {
-    if (trendingDue) {
-      await refreshTrending();
-      if (sectorsDue) await sleep(METADATA_GAP_MS);
-    }
-    if (sectorsDue) await refreshSectors();
-  } finally {
-    metadataRefreshing = false;
-  }
-}
-
-/** Coins people are actually looking up right now. */
-async function refreshTrending(): Promise<void> {
   try {
     const payload = await fetchJson<{ coins?: Array<{ item?: { id?: string } }> }>(
       `${COINGECKO}/search/trending`,
       coingeckoHeaders(),
     );
-    const ids = new Set(
-      (payload.coins ?? []).map((entry) => entry.item?.id).filter((id): id is string => !!id),
-    );
-    if (ids.size > 0) trendingCache = { value: ids, fetchedAt: Date.now() };
+    const ids = (payload.coins ?? [])
+      .map((entry) => entry.item?.id)
+      .filter((id): id is string => !!id);
+    if (ids.length === 0) throw new Error("trending returned no coins");
+    await writeCache(TRENDING_KEY, { value: ids, fetchedAt: Date.now() }, TRENDING_TTL_MS / 250);
+    return new Set(ids);
   } catch (error) {
     console.warn("[market] trending unavailable:", error);
+    return new Set(hit?.value ?? []);
   }
 }
 
-/** Which coins belong to which sector tab, as coin id -> tags. */
-async function refreshSectors(): Promise<void> {
-  const byCoin = new Map<string, string[]>();
-  let anySucceeded = false;
+/**
+ * Which coins belong to which sector tab, as coin id -> tags.
+ *
+ * Six-hour cache. A sector that fails to load leaves its tab empty rather than
+ * taking the refresh down with it, and a sector that returns nothing is not
+ * allowed to overwrite a good answer.
+ */
+async function getSectors(): Promise<Record<string, string[]>> {
+  const hit = await readCache<Record<string, string[]>>(SECTORS_KEY);
+  if (hit && Date.now() - hit.fetchedAt < SECTOR_TTL_MS) return hit.value;
 
-  for (const [index, { tag, category }] of SECTORS.entries()) {
-    if (index > 0) await sleep(METADATA_GAP_MS);
-    try {
-      const rows = await fetchJson<CoinGeckoMarket[]>(
-        `${COINGECKO}/coins/markets?vs_currency=usd&category=${category}` +
-          `&order=market_cap_desc&per_page=100&page=1&sparkline=false`,
-        coingeckoHeaders(),
-      );
-      // A 200 carrying an empty list is not success — caching that would blank
-      // the tab for the next six hours.
-      if (rows.length === 0) {
-        console.warn(`[market] sector "${tag}" returned no coins`);
-        continue;
+  const results = await Promise.all(
+    SECTORS.map(async ({ tag, category }) => {
+      try {
+        const rows = await fetchJson<CoinGeckoMarket[]>(
+          `${COINGECKO}/coins/markets?vs_currency=usd&category=${category}` +
+            `&order=market_cap_desc&per_page=100&page=1&sparkline=false`,
+          coingeckoHeaders(),
+        );
+        // A 200 carrying an empty list is not success — caching that would
+        // blank the tab for the next six hours.
+        if (rows.length === 0) throw new Error("no coins returned");
+        return { tag, ids: rows.map((row) => row.id).filter((id): id is string => !!id) };
+      } catch (error) {
+        console.warn(`[market] sector "${tag}" unavailable:`, error);
+        return { tag, ids: [] as string[] };
       }
-      anySucceeded = true;
-      for (const row of rows) {
-        if (!row.id) continue;
-        const existing = byCoin.get(row.id);
-        if (existing) existing.push(tag);
-        else byCoin.set(row.id, [tag]);
-      }
-    } catch (error) {
-      console.warn(`[market] sector "${tag}" unavailable:`, error);
+    }),
+  );
+
+  const byCoin: Record<string, string[]> = {};
+  let anySucceeded = false;
+  for (const { tag, ids } of results) {
+    if (ids.length > 0) anySucceeded = true;
+    for (const id of ids) {
+      const existing = byCoin[id];
+      if (existing) existing.push(tag);
+      else byCoin[id] = [tag];
     }
   }
 
-  // Never replace a good map with a worse one built from failed calls.
-  if (anySucceeded) {
-    sectorCache = { value: byCoin, fetchedAt: Date.now() };
-    console.info(`[market] sector membership refreshed: ${byCoin.size} coins tagged`);
-  }
-}
+  if (!anySucceeded) return hit?.value ?? {};
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  await writeCache(SECTORS_KEY, { value: byCoin, fetchedAt: Date.now() }, SECTOR_TTL_MS / 250);
+  console.info(`[market] sector membership refreshed: ${Object.keys(byCoin).length} coins tagged`);
+  return byCoin;
 }
 
 /** The index publishes once a day, so it gets its own long cache. */
 async function fetchFearGreed(): Promise<MarketTicker["fearGreed"]> {
-  if (fearGreedCache && Date.now() - fearGreedCache.fetchedAt < FEAR_GREED_TTL_MS) {
-    return fearGreedCache.value;
-  }
+  const hit = await readCache<MarketTicker["fearGreed"]>(FEAR_GREED_KEY);
+  if (hit && Date.now() - hit.fetchedAt < FEAR_GREED_TTL_MS) return hit.value;
+
   try {
     const payload = await fetchJson<{
       data?: Array<{ value?: string; value_classification?: string }>;
@@ -352,11 +339,15 @@ async function fetchFearGreed(): Promise<MarketTicker["fearGreed"]> {
     if (!Number.isFinite(value)) throw new Error("fear & greed returned no value");
 
     const result = { value, label: row?.value_classification ?? "" };
-    fearGreedCache = { value: result, fetchedAt: Date.now() };
+    await writeCache(
+      FEAR_GREED_KEY,
+      { value: result, fetchedAt: Date.now() },
+      FEAR_GREED_TTL_MS / 250,
+    );
     return result;
   } catch (error) {
     console.warn("[market] fear & greed unavailable:", error);
-    return fearGreedCache?.value ?? null;
+    return hit?.value ?? null;
   }
 }
 
@@ -385,7 +376,14 @@ function coingeckoHeaders(): HeadersInit {
 
 async function fetchJson<T>(url: string, headers: HeadersInit = {}): Promise<T> {
   const response = await fetch(url, {
-    headers: { accept: "application/json", ...headers },
+    headers: {
+      accept: "application/json",
+      // Cloudflare Workers send no User-Agent by default and CoinGecko answers
+      // those with a 403. Node happens to send one, which is why this only
+      // shows up once you deploy to the edge.
+      "user-agent": USER_AGENT,
+      ...headers,
+    },
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
   if (!response.ok) {

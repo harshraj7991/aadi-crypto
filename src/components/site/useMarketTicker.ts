@@ -17,9 +17,9 @@ async function fetchTicker(): Promise<MarketTicker> {
  * Live market data for the header strips.
  *
  * The server-rendered copy comes from the root loader, so the first paint has
- * real numbers in the HTML. After hydration this polls our own API every ten
- * seconds — never a third-party API, so the key stays on the server and the
- * upstream call count does not grow with the audience.
+ * real numbers in the HTML. After hydration this polls our own API — never a
+ * third-party API, so the key stays on the server and the upstream call count
+ * does not grow with the audience.
  *
  * React Query dedupes on the key, so every component calling this hook shares
  * one request.
@@ -31,8 +31,10 @@ export function useMarketTicker(): MarketTicker {
     queryKey: marketTickerQueryKey,
     queryFn: fetchTicker,
     initialData: marketTicker,
-    staleTime: 10_000,
-    refetchInterval: 10_000,
+    // The server refreshes about once a minute, so polling faster than this
+    // only costs requests for an identical answer.
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     // A failed poll keeps the last good numbers on screen rather than blanking.
     retry: 1,
   });

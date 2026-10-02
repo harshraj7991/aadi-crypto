@@ -3,11 +3,11 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { handleApiRequest } from "./server/api";
-import { primeMarketTicker } from "./server/market-source";
 
-// Warm the market cache at boot so the first visitor after a deploy is served
-// from cache like everyone else.
-primeMarketTicker();
+// Nothing is primed at module scope on purpose: Cloudflare Workers forbid I/O
+// in global scope, and an isolate is created often enough that a boot-time
+// fetch would be neither free nor reliable. The first request after a cold
+// start pays for the fetch; every request after that is a cache read.
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
