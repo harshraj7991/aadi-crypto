@@ -1,14 +1,17 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { findCategory, findSubcategory } from "@/data/taxonomy";
+import { fetchArticles } from "@/lib/news-fn";
+import { LeadStory, StoryCard } from "@/components/site/ArticleCards";
 import { ComingSoonPage } from "@/components/site/ComingSoon";
 
 export const Route = createFileRoute("/news/$category/$subcategory/")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const category = findCategory(params.category);
     if (!category) throw notFound();
     const subcategory = findSubcategory(category, params.subcategory);
     if (!subcategory) throw notFound();
-    return { category, subcategory };
+    const feed = await fetchArticles({ data: { subcategorySlug: params.subcategory } });
+    return { category, subcategory, feed };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -23,20 +26,43 @@ export const Route = createFileRoute("/news/$category/$subcategory/")({
         { name: "description", content: loaderData.category.blurb },
         { property: "og:title", content: title },
         { property: "og:description", content: loaderData.category.blurb },
-        { name: "robots", content: "noindex, follow" },
+        ...(loaderData.feed.articles.length > 0
+          ? []
+          : [{ name: "robots", content: "noindex, follow" }]),
       ],
     };
   },
-  component: SubcategoryComingSoon,
+  component: SubcategoryPage,
 });
 
-function SubcategoryComingSoon() {
-  const { category, subcategory } = Route.useLoaderData();
+function SubcategoryPage() {
+  const { category, subcategory, feed } = Route.useLoaderData();
+
+  if (feed.articles.length === 0) {
+    return (
+      <ComingSoonPage
+        title={subcategory.title}
+        blurb={category.blurb}
+        items={[`${category.title} desk`]}
+      />
+    );
+  }
+
+  const [lead, ...rest] = feed.articles;
   return (
-    <ComingSoonPage
-      title={subcategory.title}
-      blurb={category.blurb}
-      items={[`${category.title} desk`]}
-    />
+    <div className="container-page py-8">
+      <header className="mb-7 border-b border-border pb-5">
+        <p className="kicker text-muted-foreground">{category.title}</p>
+        <h1 className="mt-1.5 text-[clamp(1.6rem,3.5vw,2.25rem)] font-extrabold leading-tight text-ink">
+          {subcategory.title}
+        </h1>
+      </header>
+      {lead && <LeadStory article={lead} />}
+      <div className="mt-8 border-t border-border">
+        {rest.map((a) => (
+          <StoryCard key={a.id} article={a} />
+        ))}
+      </div>
+    </div>
   );
 }
