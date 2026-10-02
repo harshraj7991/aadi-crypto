@@ -7,12 +7,24 @@
  */
 
 import { getMarketTicker } from "./market-source";
+import { fetchUpload } from "./wp-source";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" } as const;
 
 /** Returns null when the request is not ours, so SSR handles it instead. */
 export async function handleApiRequest(request: Request): Promise<Response | null> {
   const { pathname } = new URL(request.url);
+
+  // Media proxy. The CMS subdomain is deliberately not behind Cloudflare, so
+  // serving uploads from here is what keeps readers off shared hosting and puts
+  // images on the CDN.
+  if (pathname.startsWith("/img/")) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    return fetchUpload(decodeURIComponent(pathname.slice("/img/".length)));
+  }
+
   if (!pathname.startsWith("/api/")) return null;
 
   if (pathname === "/api/v1/market/ticker") {
