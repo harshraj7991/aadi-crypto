@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="AadiCrypto platform architecture: how news, market data and pages fit together, and the rules that keep the site fast, cheap and secure as traffic grows.">
+<meta name="description" content="AadiCrypto platform architecture: how live market data reaches the page, why it is cached the way it is, and how the site is hosted on Cloudflare Workers.">
 <meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
 <title>AadiCrypto Platform Architecture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,7 +49,6 @@
   }
   img{max-width:100%;}
 
-  /* ---- ticker-style sticky bar ---- */
   .tape{
     position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
     background:var(--surface); border-bottom:1px solid var(--line);
@@ -66,7 +66,6 @@
   .wrap{max-width:980px; margin:0 auto; padding-inline:20px; padding-block:0 72px;}
   .col{max-width:68ch;}
 
-  /* ---- masthead ---- */
   .masthead{padding-block:52px 40px; border-bottom:2px solid var(--ink); margin-bottom:8px;}
   .eyebrow{
     font-family:var(--f-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
@@ -78,13 +77,9 @@
   }
   .standfirst{font-size:20px; line-height:1.5; color:var(--ink-2); margin:0 0 28px; max-width:56ch;}
   .facts{display:flex; flex-wrap:wrap; gap:10px; font-family:var(--f-mono); font-size:11.5px;}
-  .fact{
-    border:1px solid var(--line); background:var(--surface);
-    padding:5px 10px; color:var(--muted);
-  }
+  .fact{border:1px solid var(--line); background:var(--surface); padding:5px 10px; color:var(--muted);}
   .fact b{color:var(--ink); font-weight:600;}
 
-  /* ---- sections ---- */
   section{padding-block:44px 0;}
   .kicker{
     font-family:var(--f-mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
@@ -109,7 +104,6 @@
   a{color:var(--accent);}
   a:focus-visible, .tape a:focus-visible{outline:2px solid var(--accent); outline-offset:3px;}
 
-  /* ---- tables ---- */
   .tscroll{overflow-x:auto; margin:24px 0 8px; border-top:1px solid var(--ink); border-bottom:1px solid var(--line);}
   table{border-collapse:collapse; width:100%; min-width:540px; font-size:15px;}
   th{
@@ -123,21 +117,25 @@
   td.mono, th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums; font-weight:400;}
   td.mono:first-child{font-size:13px; font-weight:500;}
   .verb{font-family:var(--f-mono); font-size:10.5px; color:var(--accent); letter-spacing:.06em;}
+  .live{color:var(--accent); font-weight:600;}
+  .todo{color:var(--muted);}
   caption{caption-side:bottom; text-align:left; font-size:13px; color:var(--muted); padding-top:12px;}
 
-  /* ---- callouts ---- */
   .decision{
     border-left:3px solid var(--accent); background:var(--accent-soft);
     padding:20px 22px; margin:28px 0; max-width:68ch;
   }
+  .decision.correction{border-left-color:var(--amber); background:var(--surface-2);}
   .decision .tag{
     font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
     color:var(--accent); display:block; margin-bottom:8px;
   }
-  .decision p{margin:0; font-size:17.5px;}
+  .decision.correction .tag{color:var(--amber);}
+  .decision p{margin:0 0 12px; font-size:17.5px;}
+  .decision p:last-child{margin:0;}
   .rule{
     border:1px solid var(--line-strong); background:var(--surface);
-    padding:24px 24px; margin:28px 0; max-width:68ch;
+    padding:24px; margin:28px 0; max-width:68ch;
   }
   .rule .big{
     font-family:var(--f-display); font-weight:600; font-size:clamp(19px,3vw,25px);
@@ -146,7 +144,6 @@
   .rule p:last-child{margin:0; color:var(--ink-2); font-size:16px;}
   .warn{color:var(--red); font-weight:600;}
 
-  /* ---- numbered pipeline ---- */
   .layers{margin:26px 0 0; padding:0; list-style:none; border-left:1px solid var(--line);}
   .layers li{position:relative; padding:0 0 30px 26px;}
   .layers li:last-child{padding-bottom:0;}
@@ -164,7 +161,6 @@
   ul.plain{margin:0 0 17px; padding-left:20px;}
   ul.plain li{margin-bottom:7px; font-size:16px; color:var(--ink-2);}
 
-  /* ---- code ---- */
   pre{
     font-family:var(--f-mono); font-size:12.5px; line-height:1.7;
     background:var(--surface); border:1px solid var(--line);
@@ -172,20 +168,17 @@
   }
   pre b{color:var(--ink); font-weight:600;}
   pre i{color:var(--muted); font-style:normal;}
+  pre .ok{color:var(--accent);}
 
-  /* ---- figures ---- */
   figure{margin:30px 0 8px;}
-  .figbox{
-    border:1px solid var(--line); background:var(--surface);
-    padding:22px 20px; overflow-x:auto;
-  }
-  .figbox svg{display:block; width:100%; min-width:640px; max-width:100%; height:auto;}
+  .figbox{border:1px solid var(--line); background:var(--surface); padding:22px 20px; overflow-x:auto;}
+  .figbox svg{display:block; width:100%; min-width:620px; max-width:100%; height:auto;}
   figcaption{font-size:13.5px; color:var(--muted); padding-top:12px; max-width:66ch;}
   figcaption b{color:var(--ink-2); font-weight:600;}
 
   .d-box{fill:var(--surface-2); stroke:var(--line-strong); stroke-width:1;}
   .d-box-accent{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.4;}
-  .d-box-dim{fill:none; stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 3;}
+  .d-group{fill:none; stroke:var(--line-strong); stroke-width:1; stroke-dasharray:4 3;}
   .d-lab{fill:var(--ink); font-family:var(--f-display); font-size:13px; font-weight:600;}
   .d-sub{fill:var(--muted); font-family:var(--f-mono); font-size:10px;}
   .d-cap{fill:var(--muted); font-family:var(--f-mono); font-size:10px; letter-spacing:.12em;}
@@ -194,6 +187,10 @@
   .d-arrowlab{fill:var(--muted); font-family:var(--f-mono); font-size:10px;}
   .d-line{stroke:var(--line-strong); stroke-width:1.3; fill:none;}
   .d-head{fill:var(--line-strong);}
+  .d-bar-over{fill:var(--red);}
+  .d-bar-ok{fill:var(--accent);}
+  .d-axis{stroke:var(--line-strong); stroke-width:1;}
+  .d-limit{stroke:var(--red); stroke-width:1.2; stroke-dasharray:4 3;}
 
   footer{
     margin-top:64px; padding-top:22px; border-top:1px solid var(--line);
@@ -208,44 +205,71 @@
     .decision,.rule{padding:18px;}
   }
 </style>
-
 </head>
 <body>
+
 <div class="tape">
   <div class="tape-in">
     <strong>AadiCrypto</strong>
     <span class="sep">/</span>
-    <span>Architecture v1</span>
+    <span>Architecture v2</span>
+    <a href="#status">Status</a>
     <a href="#data">Data</a>
-    <a href="#render">Rendering</a>
     <a href="#arch">Stack</a>
+    <a href="#rule">Caching</a>
     <a href="#api">API</a>
     <a href="#security">Security</a>
-    <a href="#deploy">Hosting</a>
-    <a href="#open">Open</a>
+    <a href="#hosting">Hosting</a>
+    <a href="#lessons">Lessons</a>
   </div>
 </div>
 
 <div class="wrap">
 
   <header class="masthead">
-    <p class="eyebrow">System design &middot; Draft 1 &middot; 19 September 2026</p>
+    <p class="eyebrow">System design &middot; Version 2 &middot; 2 October 2026</p>
     <h1>How AadiCrypto is put together</h1>
-    <p class="standfirst">Home and News look like one page. Underneath they are three different kinds of data moving at three different speeds. This is how they fit together, and the rules that keep the site fast, cheap and safe as traffic grows.</p>
+    <p class="standfirst">Live market data for the top hundred coins, served from the edge for nothing a month. This describes what is actually running, what is deliberately still a placeholder, and the reasoning behind both.</p>
     <div class="facts">
-      <span class="fact"><b>Frontend</b> Next.js (SSR + ISR)</span>
-      <span class="fact"><b>API</b> Node, read-only JSON</span>
-      <span class="fact"><b>Store</b> PostgreSQL + Redis</span>
-      <span class="fact"><b>Host</b> Hostinger VPS + Cloudflare</span>
+      <span class="fact"><b>Frontend</b> TanStack Start (SSR)</span>
+      <span class="fact"><b>Runtime</b> Cloudflare Workers</span>
+      <span class="fact"><b>Cache</b> Cache API, per datacentre</span>
+      <span class="fact"><b>Cost</b> &#8377;0 / month</span>
     </div>
   </header>
 
+  <section id="status">
+    <p class="kicker">01 &mdash; Where things stand</p>
+    <h2>What is real and what is a placeholder</h2>
+    <div class="col">
+      <p>This is the part most architecture documents leave out, and it is the part that matters when someone else opens the repository. Every figure on the site is live. Every story is a placeholder that says so.</p>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr><th>Area</th><th>State</th><th>Detail</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Header ticker</td><td class="live">Live</td><td>Market cap, 24h volume, BTC and ETH dominance, Fear &amp; Greed, plus ten headline coins</td></tr>
+          <tr><td>Market snapshot</td><td class="live">Live</td><td>Global figures and the day's top gainer and loser, picked from the top hundred</td></tr>
+          <tr><td>Crypto Market table</td><td class="live">Live</td><td>Top 100 by market cap with eight tabs: All, Gainers, Losers, Trending, DeFi, AI, RWA, Memes</td></tr>
+          <tr><td>Newsroom</td><td class="todo">Placeholder</td><td>Every <code>/news</code> route renders a Coming soon page. No fabricated headlines anywhere</td></tr>
+          <tr><td>Topics, coins, formats</td><td class="todo">Placeholder</td><td>Taxonomy is real, so unknown slugs still 404. Content is not</td></tr>
+          <tr><td>Markets sub-pages</td><td class="todo">Placeholder</td><td>Derivatives, funding, liquidations and on-chain need sources we have not wired</td></tr>
+          <tr><td>Accounts, watchlists</td><td class="todo">Not started</td><td>Needs a database, which the site does not yet have</td></tr>
+        </tbody>
+        <caption>The site is deliberately indexed as <code>noindex</code> until the newsroom ships. A site of placeholder pages is a worse starting position with search engines than no site at all.</caption>
+      </table>
+    </div>
+  </section>
+
   <section id="data">
-    <p class="kicker">01 &mdash; The shape of the problem</p>
+    <p class="kicker">02 &mdash; The shape of the problem</p>
     <h2>Three kinds of data, one page</h2>
     <div class="col">
-      <p>The top strip on every page carries live market numbers. The middle of the page carries stories. The nav, footer and Learn pages barely change at all. They arrive on the same screen, so it is tempting to treat them the same way. Don't.</p>
-      <p>If the whole page waits for live prices, every news article becomes slow, and slow news pages don't rank. Split them at the start and each one gets the cache it deserves.</p>
+      <p>The top strip carries live market numbers. The middle of the page will carry stories. The nav, footer and Learn pages barely change at all. They arrive on one screen, so it is tempting to treat them the same way. Don't.</p>
+      <p>If a page waits on live prices, every article becomes slow, and slow articles do not rank. Split them at the start and each gets the cache it deserves.</p>
     </div>
 
     <div class="tscroll">
@@ -256,272 +280,238 @@
         <tbody>
           <tr>
             <td>Market data</td>
-            <td>Top ticker, price widgets, the whole <code>/markets</code> tree</td>
-            <td class="mono">~10 sec</td>
-            <td>One worker fetches, everyone reads the same cached copy</td>
+            <td>Top ticker, snapshot cards, the Crypto Market table</td>
+            <td class="mono">seconds</td>
+            <td>One fetch per datacentre per minute; everybody reads that copy</td>
           </tr>
           <tr>
             <td>News</td>
-            <td>Hero story, Latest News rail, topic blocks, Most Read</td>
+            <td>Everything under <code>/news</code>, topic and coin hubs</td>
             <td class="mono">~5 min</td>
-            <td>Stored in your database, cached hard, cleared on publish</td>
+            <td>Will live in our own store, cached hard, cleared on publish</td>
           </tr>
           <tr>
             <td>Editorial furniture</td>
-            <td>Nav, footer, newsletter block, Learn pages</td>
+            <td>Nav, footer, taxonomy, Learn pages</td>
             <td class="mono">rarely</td>
-            <td>Built into the page, cached for hours</td>
+            <td>Compiled into the build, cached for hours</td>
           </tr>
         </tbody>
-        <caption>Each row wants a different cache lifetime. One cache setting for all three is the most common way a crypto site ends up slow.</caption>
       </table>
     </div>
   </section>
 
-  <section id="render">
-    <p class="kicker">02 &mdash; The first decision</p>
-    <h2>Render the pages on the server</h2>
+  <section id="rendering">
+    <p class="kicker">03 &mdash; Rendering</p>
+    <h2>Server rendering was already solved</h2>
+
+    <div class="decision correction">
+      <span class="tag">Correction to version 1</span>
+      <p>Version 1 of this document recommended moving the frontend to Next.js so pages would render on the server. <strong>That recommendation was wrong for this project.</strong> The app is built on TanStack Start, which already renders on the server.</p>
+      <p>Checked rather than assumed: a plain request to the deployed site returns 149&nbsp;KB of real HTML with the headline, the ticker figures and the meta tags all present. There was never a migration to do.</p>
+    </div>
+
     <div class="col">
-      <p>Today the site is a plain React app: the browser downloads JavaScript, then draws the page. For an app behind a login that is fine. For a news site that lives on search traffic, it quietly costs you most of your audience.</p>
-      <p>A crawler asking for an article gets an empty shell. There is no headline in the HTML, no description, no social preview image. Google will sometimes come back later and run the JavaScript, but that pass is delayed and not guaranteed &mdash; and Google News works on a timescale of minutes, not days.</p>
+      <p>So a crawler asking for a page gets the finished article on the first request, which is what Google News and Discover need. Route-level <code>head()</code> blocks already set per-page titles, descriptions and Open Graph tags.</p>
+      <p>What is still owed for search: a sitemap, a news sitemap, an RSS feed, and <code>NewsArticle</code> structured data on each story. All of those wait on the newsroom, because there is nothing yet to put in them.</p>
+    </div>
+  </section>
+
+  <section id="arch">
+    <p class="kicker">04 &mdash; The stack</p>
+    <h2>How a price reaches the page</h2>
+    <div class="col">
+      <p>There is no server to maintain. The whole application &mdash; page rendering and the market API together &mdash; is one Cloudflare Worker, running in whichever datacentre is closest to the reader.</p>
     </div>
 
     <figure>
       <div class="figbox">
-        <svg viewBox="0 0 780 196" role="img" aria-label="Comparison: a client-rendered app hands a crawler an empty shell that has to wait in a render queue, while a server-rendered page hands it complete HTML that can be indexed immediately.">
+        <svg viewBox="0 0 1000 300" role="img" aria-label="Architecture: CoinGecko and alternative.me feed a Cloudflare Worker that normalises the data, stores it in the per-datacentre Cache API, and serves both server-rendered pages and a JSON API through Cloudflare's edge cache to browsers.">
           <defs>
             <marker id="mk-a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
               <polygon class="d-head" points="0,0 10,4 0,8"></polygon>
             </marker>
           </defs>
 
-          <text class="d-cap" x="0" y="14">WHAT GOOGLEBOT RECEIVES</text>
+          <text class="d-cap" x="101" y="22" text-anchor="middle">SOURCES</text>
+          <text class="d-cap" x="400" y="22" text-anchor="middle">CLOUDFLARE WORKER</text>
+          <text class="d-cap" x="689" y="22" text-anchor="middle">EDGE</text>
+          <text class="d-cap" x="903" y="22" text-anchor="middle">READERS</text>
 
-          <text class="d-warn" x="0" y="62">TODAY</text>
-          <text class="d-warn" x="0" y="76">SPA</text>
-          <rect class="d-box" x="86" y="38" width="140" height="48" rx="3"></rect>
-          <text class="d-lab" x="156" y="60" text-anchor="middle">Googlebot</text>
-          <text class="d-sub" x="156" y="74" text-anchor="middle">first request</text>
-          <line class="d-line" x1="228" y1="62" x2="272" y2="62" marker-end="url(#mk-a)"></line>
-          <rect class="d-box-dim" x="276" y="38" width="176" height="48" rx="3"></rect>
-          <text class="d-lab" x="364" y="60" text-anchor="middle">&lt;div id="root"&gt;</text>
-          <text class="d-sub" x="364" y="74" text-anchor="middle">empty shell, no headline</text>
-          <line class="d-line" x1="454" y1="62" x2="516" y2="62" marker-end="url(#mk-a)"></line>
-          <text class="d-arrowlab" x="485" y="54" text-anchor="middle">runs JS</text>
-          <rect class="d-box-dim" x="520" y="38" width="200" height="48" rx="3"></rect>
-          <text class="d-lab" x="620" y="60" text-anchor="middle">render queue</text>
-          <text class="d-sub" x="620" y="74" text-anchor="middle">delayed &middot; may never run</text>
-          <text class="d-warn" x="726" y="66">✕</text>
+          <rect class="d-box" x="16" y="56" width="170" height="60" rx="3"></rect>
+          <text class="d-lab" x="101" y="82" text-anchor="middle">CoinGecko</text>
+          <text class="d-sub" x="101" y="98" text-anchor="middle">prices · trending · sectors</text>
 
-          <text class="d-note" x="0" y="152">PROPOSED</text>
-          <text class="d-note" x="0" y="166">SSR</text>
-          <rect class="d-box" x="86" y="128" width="140" height="48" rx="3"></rect>
-          <text class="d-lab" x="156" y="150" text-anchor="middle">Googlebot</text>
-          <text class="d-sub" x="156" y="164" text-anchor="middle">first request</text>
-          <line class="d-line" x1="228" y1="152" x2="272" y2="152" marker-end="url(#mk-a)"></line>
-          <rect class="d-box" x="276" y="128" width="176" height="48" rx="3"></rect>
-          <text class="d-lab" x="364" y="150" text-anchor="middle">complete HTML</text>
-          <text class="d-sub" x="364" y="164" text-anchor="middle">title &middot; meta &middot; JSON-LD</text>
-          <line class="d-line" x1="454" y1="152" x2="516" y2="152" marker-end="url(#mk-a)"></line>
-          <text class="d-arrowlab" x="485" y="144" text-anchor="middle">done</text>
-          <rect class="d-box-accent" x="520" y="128" width="200" height="48" rx="3"></rect>
-          <text class="d-lab" x="620" y="150" text-anchor="middle">indexed</text>
-          <text class="d-sub" x="620" y="164" text-anchor="middle">minutes, not days</text>
-          <text class="d-note" x="726" y="156">✓</text>
+          <rect class="d-box" x="16" y="152" width="170" height="60" rx="3"></rect>
+          <text class="d-lab" x="101" y="178" text-anchor="middle">alternative.me</text>
+          <text class="d-sub" x="101" y="194" text-anchor="middle">fear &amp; greed</text>
+
+          <rect class="d-group" x="250" y="40" width="300" height="200" rx="4"></rect>
+
+          <rect class="d-box" x="268" y="62" width="264" height="48" rx="3"></rect>
+          <text class="d-lab" x="400" y="83" text-anchor="middle">market-source.ts</text>
+          <text class="d-sub" x="400" y="99" text-anchor="middle">fetch · normalise · fall back</text>
+
+          <rect class="d-box-accent" x="268" y="122" width="264" height="48" rx="3"></rect>
+          <text class="d-lab" x="400" y="143" text-anchor="middle">Cache API</text>
+          <text class="d-sub" x="400" y="159" text-anchor="middle">per datacentre · 60s</text>
+
+          <rect class="d-box" x="268" y="182" width="264" height="48" rx="3"></rect>
+          <text class="d-lab" x="400" y="203" text-anchor="middle">SSR + /api/v1</text>
+          <text class="d-sub" x="400" y="219" text-anchor="middle">pages and JSON</text>
+
+          <rect class="d-box" x="614" y="110" width="150" height="60" rx="3"></rect>
+          <text class="d-lab" x="689" y="136" text-anchor="middle">Edge cache</text>
+          <text class="d-sub" x="689" y="152" text-anchor="middle">s-maxage=60</text>
+
+          <rect class="d-box" x="828" y="110" width="150" height="60" rx="3"></rect>
+          <text class="d-lab" x="903" y="136" text-anchor="middle">Browsers</text>
+          <text class="d-sub" x="903" y="152" text-anchor="middle">poll every 30s</text>
+
+          <line class="d-line" x1="188" y1="86" x2="264" y2="86" marker-end="url(#mk-a)"></line>
+          <path class="d-line" d="M188,182 H228 V100 H264" marker-end="url(#mk-a)"></path>
+
+          <line class="d-line" x1="400" y1="112" x2="400" y2="118" marker-end="url(#mk-a)"></line>
+          <line class="d-line" x1="400" y1="172" x2="400" y2="178" marker-end="url(#mk-a)"></line>
+
+          <path class="d-line" d="M534,206 H574 V140 H612" marker-end="url(#mk-a)"></path>
+          <line class="d-line" x1="766" y1="140" x2="826" y2="140" marker-end="url(#mk-a)"></line>
+
+          <text class="d-note" x="101" y="246" text-anchor="middle">2 calls / min</text>
+          <text class="d-note" x="101" y="260" text-anchor="middle">per datacentre</text>
+          <text class="d-note" x="903" y="192" text-anchor="middle">any number of readers</text>
         </svg>
       </div>
-      <figcaption>The hop that changes is the middle one. <b>Server rendering removes the render queue from the path</b> &mdash; the crawler gets the finished article on the first request, which is what Google News and Discover need.</figcaption>
-    </figure>
-
-    <div class="decision">
-      <span class="tag">Decision 01</span>
-      <p>Move the frontend to <strong>Next.js with the App Router</strong>. Same React components, same design, but the HTML is built on the server. Do this <em>before</em> wiring in real data, not after &mdash; retrofitting it later means touching every page.</p>
-    </div>
-
-    <div class="col">
-      <p>The same move pays for itself in three other places: a <code>sitemap.xml</code> plus a proper news sitemap, an RSS feed, and <code>NewsArticle</code> structured data on every story. None of those are extras for a publisher. They are how the traffic arrives.</p>
-    </div>
-  </section>
-
-  <section id="arch">
-    <p class="kicker">03 &mdash; The stack</p>
-    <h2>How a price and a story reach the page</h2>
-    <div class="col">
-      <p>Data moves in one direction. Sources on the left, readers on the right, and nothing skips a step. The two stores in the middle are what make the right-hand side cheap.</p>
-    </div>
-
-    <figure>
-      <div class="figbox">
-        <svg viewBox="0 0 1060 258" role="img" aria-label="Architecture flow: price and news sources feed scheduled ingestion workers, which write to Redis and PostgreSQL; a read-only JSON API serves Next.js, which is cached at Cloudflare and read by browsers. Upstream traffic stays at about six calls a minute no matter how many readers there are.">
-          <defs>
-            <marker id="mk-b" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto">
-              <polygon class="d-head" points="0,0 10,4 0,8"></polygon>
-            </marker>
-            <marker id="mk-b2" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="8" markerHeight="7" orient="auto">
-              <polygon class="d-head" points="10,0 0,4 10,8"></polygon>
-            </marker>
-          </defs>
-
-          <text class="d-cap" x="86" y="20" text-anchor="middle">SOURCES</text>
-          <text class="d-cap" x="262" y="20" text-anchor="middle">INGEST</text>
-          <text class="d-cap" x="438" y="20" text-anchor="middle">STORE</text>
-          <text class="d-cap" x="614" y="20" text-anchor="middle">SERVE</text>
-          <text class="d-cap" x="790" y="20" text-anchor="middle">RENDER</text>
-          <text class="d-cap" x="966" y="20" text-anchor="middle">EDGE</text>
-
-          <rect class="d-box" x="16" y="52" width="140" height="54" rx="3"></rect>
-          <text class="d-lab" x="86" y="77" text-anchor="middle">Price API</text>
-          <text class="d-sub" x="86" y="92" text-anchor="middle">CoinGecko &middot; Binance</text>
-
-          <rect class="d-box" x="16" y="120" width="140" height="54" rx="3"></rect>
-          <text class="d-lab" x="86" y="145" text-anchor="middle">News feeds</text>
-          <text class="d-sub" x="86" y="160" text-anchor="middle">RSS &middot; news API</text>
-
-          <rect class="d-box" x="16" y="188" width="140" height="54" rx="3"></rect>
-          <text class="d-lab" x="86" y="213" text-anchor="middle">Your editors</text>
-          <text class="d-sub" x="86" y="228" text-anchor="middle">admin / CMS</text>
-
-          <rect class="d-box" x="192" y="52" width="140" height="54" rx="3"></rect>
-          <text class="d-lab" x="262" y="77" text-anchor="middle">Price worker</text>
-          <text class="d-sub" x="262" y="92" text-anchor="middle">every 10 sec</text>
-
-          <rect class="d-box" x="192" y="120" width="140" height="54" rx="3"></rect>
-          <text class="d-lab" x="262" y="145" text-anchor="middle">News worker</text>
-          <text class="d-sub" x="262" y="160" text-anchor="middle">every 5 min</text>
-
-          <rect class="d-box" x="368" y="48" width="140" height="62" rx="3"></rect>
-          <text class="d-lab" x="438" y="77" text-anchor="middle">Redis</text>
-          <text class="d-sub" x="438" y="92" text-anchor="middle">live snapshot</text>
-
-          <rect class="d-box" x="368" y="140" width="140" height="62" rx="3"></rect>
-          <text class="d-lab" x="438" y="169" text-anchor="middle">PostgreSQL</text>
-          <text class="d-sub" x="438" y="184" text-anchor="middle">source of truth</text>
-
-          <rect class="d-box-accent" x="544" y="88" width="140" height="70" rx="3"></rect>
-          <text class="d-lab" x="614" y="121" text-anchor="middle">JSON API</text>
-          <text class="d-sub" x="614" y="136" text-anchor="middle">read-only &middot; /v1</text>
-
-          <rect class="d-box" x="720" y="88" width="140" height="70" rx="3"></rect>
-          <text class="d-lab" x="790" y="121" text-anchor="middle">Next.js</text>
-          <text class="d-sub" x="790" y="136" text-anchor="middle">SSR + ISR</text>
-
-          <rect class="d-box" x="896" y="52" width="140" height="58" rx="3"></rect>
-          <text class="d-lab" x="966" y="79" text-anchor="middle">Cloudflare</text>
-          <text class="d-sub" x="966" y="94" text-anchor="middle">edge cache</text>
-
-          <rect class="d-box" x="896" y="150" width="140" height="58" rx="3"></rect>
-          <text class="d-lab" x="966" y="174" text-anchor="middle">Browsers</text>
-          <text class="d-sub" x="966" y="190" text-anchor="middle">poll ticker /10s</text>
-
-          <line class="d-line" x1="158" y1="79" x2="188" y2="79" marker-end="url(#mk-b)"></line>
-          <line class="d-line" x1="158" y1="147" x2="188" y2="147" marker-end="url(#mk-b)"></line>
-          <path class="d-line" d="M158,215 H352 V190 H364" marker-end="url(#mk-b)"></path>
-          <text class="d-arrowlab" x="252" y="209" text-anchor="middle">publish</text>
-
-          <line class="d-line" x1="334" y1="79" x2="364" y2="79" marker-end="url(#mk-b)"></line>
-          <path class="d-line" d="M334,147 H350 V171 H364" marker-end="url(#mk-b)"></path>
-
-          <line class="d-line" x1="438" y1="114" x2="438" y2="136" marker-end="url(#mk-b)" marker-start="url(#mk-b2)"></line>
-          <text class="d-arrowlab" x="448" y="129">cache-aside</text>
-
-          <path class="d-line" d="M510,79 H526 V123 H540" marker-end="url(#mk-b)"></path>
-          <path class="d-line" d="M510,171 H526 V123 H540" marker-end="url(#mk-b)"></path>
-
-          <line class="d-line" x1="686" y1="123" x2="716" y2="123" marker-end="url(#mk-b)"></line>
-          <path class="d-line" d="M862,123 H878 V81 H892" marker-end="url(#mk-b)"></path>
-          <line class="d-line" x1="966" y1="114" x2="966" y2="146" marker-end="url(#mk-b)"></line>
-
-          <text class="d-note" x="262" y="238" text-anchor="middle">≈ 6 upstream calls / min</text>
-          <text class="d-note" x="966" y="230" text-anchor="middle">any number of readers</text>
-        </svg>
-      </div>
-      <figcaption>The two notes at the bottom are the whole point. <b>The left side of the diagram does a fixed amount of work per minute; the right side scales freely.</b> Adding readers never adds upstream API calls.</figcaption>
+      <figcaption>The two notes carry the whole argument. <b>The left side does a fixed amount of work per minute; the right side scales freely.</b> Adding readers never adds upstream calls, because no browser ever talks to CoinGecko.</figcaption>
     </figure>
   </section>
 
   <section id="rule">
-    <p class="kicker">04 &mdash; The rule that keeps it cheap</p>
+    <p class="kicker">05 &mdash; Caching</p>
     <h2>The browser never calls a third-party API</h2>
 
     <div class="rule">
-      <p class="big">One worker fetches prices every ten seconds and writes them to Redis. The API reads Redis. Nothing else touches the upstream.</p>
-      <p>So whether you have a hundred readers or a hundred thousand, you still make about six upstream calls a minute. Your bill stays flat, your keys stay secret, and you are never rate-limited during the exact market crash that brings you traffic.</p>
+      <p class="big">The Worker fetches prices once a minute and keeps the result in the Cache API. Everything else reads that copy. Nothing else touches the upstream.</p>
+      <p>Calling a price API straight from React looks easier for about a week. Then the key is sitting in your JavaScript bundle where anyone can read it, the provider starts throttling because ten thousand browsers are each asking separately, and you cannot cache a response you never controlled.</p>
     </div>
 
     <div class="col">
-      <p>Calling a price API straight from React looks easier for about a week. Then three things happen at once: the key is sitting in your JavaScript bundle where anyone can read it, the provider starts throttling you because ten thousand browsers are each asking separately, and you have no way to cache a response you never controlled.</p>
-      <p>The same rule applies to news. A worker pulls the feeds on a schedule, cleans them up and stores them. Pages read <em>your</em> database, never someone else's server.</p>
-      <p>Everywhere you cache, use <strong>stale-while-revalidate</strong>: if the upstream is slow or down, readers get slightly old data instead of a blank box. For a news site that trade is always worth it.</p>
+      <p>Moving to the edge changed one number in that design. On a single Node process, one cache serves every reader on earth, so a ten-second refresh is affordable. On Cloudflare there is no single process &mdash; <strong>each active datacentre keeps its own cache and refreshes independently</strong>, so the same ten seconds multiplies by however many datacentres are serving traffic.</p>
+      <p>CoinGecko's free tier allows thirty calls a minute. Each refresh costs two. The arithmetic decides the TTL:</p>
+    </div>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 780 218" role="img" aria-label="Bar chart comparing upstream call rates with three active datacentres: a 10 second TTL produces 36 calls per minute, over CoinGecko's 30 per minute limit, while a 60 second TTL produces 6 calls per minute, well inside it.">
+          <text class="d-cap" x="0" y="16">UPSTREAM CALLS PER MINUTE &middot; 3 ACTIVE DATACENTRES</text>
+
+          <line class="d-limit" x1="597" y1="40" x2="597" y2="176"></line>
+          <text class="d-warn" x="603" y="48">CoinGecko limit · 30/min</text>
+
+          <text class="d-lab" x="160" y="86" text-anchor="end">10s TTL</text>
+          <text class="d-sub" x="160" y="101" text-anchor="end">one process</text>
+          <rect class="d-bar-over" x="170" y="68" width="513" height="30" rx="2"></rect>
+          <text class="d-warn" x="693" y="88">36 — over budget</text>
+
+          <text class="d-lab" x="160" y="148" text-anchor="end">60s TTL</text>
+          <text class="d-sub" x="160" y="163" text-anchor="end">the edge</text>
+          <rect class="d-bar-ok" x="170" y="130" width="86" height="30" rx="2"></rect>
+          <text class="d-note" x="266" y="150">6 — comfortable</text>
+
+          <line class="d-axis" x1="170" y1="176" x2="740" y2="176"></line>
+          <line class="d-axis" x1="170" y1="176" x2="170" y2="182"></line>
+          <line class="d-axis" x1="312" y1="176" x2="312" y2="182"></line>
+          <line class="d-axis" x1="455" y1="176" x2="455" y2="182"></line>
+          <line class="d-axis" x1="597" y1="176" x2="597" y2="182"></line>
+          <line class="d-axis" x1="740" y1="176" x2="740" y2="182"></line>
+          <text class="d-sub" x="170" y="196" text-anchor="middle">0</text>
+          <text class="d-sub" x="312" y="196" text-anchor="middle">10</text>
+          <text class="d-sub" x="455" y="196" text-anchor="middle">20</text>
+          <text class="d-sub" x="597" y="196" text-anchor="middle">30</text>
+          <text class="d-sub" x="740" y="196" text-anchor="middle">40</text>
+          <text class="d-sub" x="455" y="212" text-anchor="middle">calls per minute</text>
+        </svg>
+      </div>
+      <figcaption>Each datacentre costs two calls per TTL window. <b>At ten seconds, three datacentres already exceed the allowance; at sixty, there is room for fifteen.</b> That is the entire reason the ticker refreshes once a minute at the edge and every ten seconds on a plain Node server.</figcaption>
+    </figure>
+
+    <div class="col">
+      <p>Reads are <strong>stale-while-revalidate inside a bounded window</strong>. Once a copy is stale we hand it back immediately and refresh alongside, so a slow upstream never blocks a render. Past a hard ceiling of three minutes we stop pretending and wait for fresh data &mdash; necessary because Workers may cancel work started after a response has been sent, and without that ceiling the data could stick forever.</p>
     </div>
   </section>
 
   <section id="layers">
-    <p class="kicker">05 &mdash; Layer by layer</p>
+    <p class="kicker">06 &mdash; Layer by layer</p>
     <h2>What each piece is responsible for</h2>
     <div class="col">
-      <p>Five moving parts. Each one has a single job, and each can be replaced without touching the others.</p>
+      <p>Five pieces. Each has one job, and each can be replaced without touching the others.</p>
     </div>
 
     <ol class="layers">
       <li>
-        <span class="num">01 &mdash; INGESTION WORKERS</span>
-        <h3>Fetch, clean, and hand over</h3>
-        <p>A separate process from the API, so a stuck feed can never take the website down. The price worker runs every 10 seconds, the news worker every 2&ndash;5 minutes.</p>
-        <p>Each source gets its own small adapter file that converts that provider's shape into <em>your</em> shape. Swapping CoinGecko for CoinMarketCap should mean editing one file, not fifty. News gets deduplicated by URL hash plus a loose title match, because the same story arrives from five feeds. Failed fetches retry with backoff; if a source dies, log it and keep serving the last good copy.</p>
+        <span class="num">01 &mdash; THE PROVIDER ADAPTER</span>
+        <h3>Everything CoinGecko-shaped lives in one file</h3>
+        <p><code>market-source.ts</code> is the only file that knows what CoinGecko returns. It converts the provider's shape into ours, so swapping to CoinMarketCap means editing one file rather than fifty.</p>
+        <p>It walks our own coin list rather than the provider's, so a missing coin can never silently reorder the table. A failed fetch returns the last good copy marked <code>stale</code>, and if nothing has ever succeeded it returns a clearly-labelled demo set rather than an error page.</p>
       </li>
       <li>
-        <span class="num">02 &mdash; STORAGE</span>
-        <h3>Postgres is the truth, Redis is the speed</h3>
-        <p>PostgreSQL holds articles, topics, coins, authors, sources and tags &mdash; anything you would be upset to lose. Redis holds the live market snapshot, cached API responses and rate-limit counters, and is never the only copy of anything.</p>
+        <span class="num">02 &mdash; THE CACHE</span>
+        <h3>One interface, two runtimes</h3>
+        <p><code>market-cache.ts</code> hides the difference between a Node process and a Cloudflare isolate. On Node it is a Map. On Workers it is the Cache API, which is free, unmetered and shared by every request hitting the same datacentre.</p>
+        <p>This matters more than it looks. Module state on Workers is not a cache, it is a coincidence &mdash; an isolate can be destroyed between any two requests. Keeping that detail behind one small interface is what lets the same code run on a VPS later without edits.</p>
       </li>
       <li>
-        <span class="num">03 &mdash; THE API</span>
-        <h3>One read-only public surface</h3>
-        <p>Versioned under <code>/api/v1</code>, JSON only, no writes from the public internet. Every response carries its own <code>Cache-Control</code> header so Cloudflare does most of the work before a request ever reaches your server.</p>
+        <span class="num">03 &mdash; SEPARATE CLOCKS</span>
+        <h3>Slow-moving data gets slow-moving caches</h3>
+        <p>Prices refresh every minute. Trending coins every ten minutes. Sector membership &mdash; which coins count as DeFi or AI &mdash; every six hours. Fear &amp; Greed every hour, because it only publishes once a day.</p>
+        <p>Putting these on one clock is what produced the first round of rate-limit failures: seven calls firing together, every refresh. On their own clocks they are four calls twice a day.</p>
       </li>
       <li>
-        <span class="num">04 &mdash; THE FRONTEND</span>
-        <h3>Mostly pre-built, live only where it matters</h3>
-        <p>Home and the news list use ISR &mdash; the page quietly rebuilds itself every 60 seconds in the background, so readers always hit a ready file. Article pages do the same, and get rebuilt on demand the moment an editor publishes. The top ticker is the one piece that polls from the browser, and it polls your own API.</p>
+        <span class="num">04 &mdash; THE API AND THE PAGES</span>
+        <h3>Both read the same cache</h3>
+        <p>Server-rendered pages call the cache directly, so the HTML leaves with real numbers already in it. The browser then polls <code>/api/v1/market/ticker</code>, which reads the same cache. One source of truth, two ways in.</p>
       </li>
       <li>
         <span class="num">05 &mdash; THE EDGE</span>
-        <h3>Cloudflare in front of everything</h3>
-        <p>The free tier is enough. It absorbs the repeat traffic, hides your server's real IP address, and gives you TLS, bot filtering and basic DDoS protection without adding a line of code. This is what lets a small VPS serve a large audience.</p>
+        <h3>Cloudflare absorbs the repeat traffic</h3>
+        <p>Every API response carries its own <code>Cache-Control</code>, so most requests are answered by Cloudflare before they reach our code at all. This is what lets a free plan serve a real audience, and it comes with TLS, bot filtering and DDoS protection at no cost and no configuration.</p>
       </li>
     </ol>
   </section>
 
   <section id="api">
-    <p class="kicker">06 &mdash; API surface</p>
-    <h2>Six endpoints cover Home and News</h2>
+    <p class="kicker">07 &mdash; API surface</p>
+    <h2>One endpoint today</h2>
     <div class="col">
-      <p>Every block on those two pages maps to one of these. Cache lifetimes are set per endpoint, not globally.</p>
+      <p>Read-only, versioned, JSON, no writes from the public internet. One endpoint covers every live block on the site.</p>
     </div>
 
     <div class="tscroll">
       <table>
         <thead>
-          <tr><th class="mono">Endpoint</th><th>Feeds</th><th class="mono">Cache</th></tr>
+          <tr><th class="mono">Endpoint</th><th>Feeds</th><th class="mono">Cache</th><th>State</th></tr>
         </thead>
         <tbody>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/market/ticker</td><td>The figures in the top strip</td><td class="mono">10 sec</td></tr>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/market/coins</td><td>Price tables and the <code>/markets</code> pages</td><td class="mono">30 sec</td></tr>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/news/breaking</td><td>The red breaking bar</td><td class="mono">30 sec</td></tr>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/news/feed</td><td>News list, home rails, topic blocks</td><td class="mono">60 sec</td></tr>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/news/most-read</td><td>Most Read sidebar</td><td class="mono">5 min</td></tr>
-          <tr><td class="mono"><span class="verb">GET</span> /v1/news/:slug</td><td>A single article page</td><td class="mono">5 min + purge on publish</td></tr>
+          <tr>
+            <td class="mono"><span class="verb">GET</span> /api/v1/market/ticker</td>
+            <td>Ticker strip, snapshot cards, the whole market table</td>
+            <td class="mono">60s + 300s swr</td>
+            <td class="live">Live</td>
+          </tr>
+          <tr><td class="mono"><span class="verb">GET</span> /api/v1/news/feed</td><td>News list and home rails</td><td class="mono">60s</td><td class="todo">Planned</td></tr>
+          <tr><td class="mono"><span class="verb">GET</span> /api/v1/news/:slug</td><td>A single article</td><td class="mono">5m + purge</td><td class="todo">Planned</td></tr>
+          <tr><td class="mono"><span class="verb">GET</span> /api/v1/news/most-read</td><td>Most Read sidebar</td><td class="mono">5m</td><td class="todo">Planned</td></tr>
         </tbody>
-        <caption>Query parameters carry the filtering the News page already shows &mdash; <code>?topic=bitcoin&amp;sort=trending&amp;page=2</code> &mdash; so the chips and tabs never need a separate endpoint.</caption>
+        <caption>The live endpoint returns roughly 40&nbsp;KB: a hundred coins with price, four change windows, market cap, volume, a twelve-point sparkline and sector tags, plus the global figures.</caption>
       </table>
     </div>
   </section>
 
   <section id="security">
-    <p class="kicker">07 &mdash; Security</p>
-    <h2>The things that actually go wrong</h2>
+    <p class="kicker">08 &mdash; Security</p>
+    <h2>Smaller surface than a server</h2>
     <div class="col">
-      <p>Nothing exotic here. Almost every incident on a site like this comes from one of these ten rows.</p>
+      <p>Moving to Workers deleted most of the original list. There is no box to patch, no SSH to lock down, no database port to leave open by accident. What remains:</p>
     </div>
 
     <div class="tscroll">
@@ -530,92 +520,125 @@
           <tr><th>Area</th><th>What to do</th></tr>
         </thead>
         <tbody>
-          <tr><td>API keys</td><td>Server-side environment variables only. <span class="warn">Never</span> a <code>NEXT_PUBLIC_</code> or <code>VITE_</code> variable &mdash; those get baked into the JavaScript bundle and anyone can read them.</td></tr>
-          <tr><td>Database</td><td>Bound to localhost or a private network. Never a public port. Strong password, and a separate read-only user for the API.</td></tr>
-          <tr><td>Server access</td><td>SSH keys only, password login disabled, non-root user, fail2ban. Firewall open on 443 and your SSH port, nothing else.</td></tr>
-          <tr><td>Origin exposure</td><td>Cloudflare proxy on, so your Hostinger IP is never public and nobody can go around the edge.</td></tr>
-          <tr><td>Rate limiting</td><td>Per-IP limits on the API, in Nginx or middleware. Stops scrapers from turning your API bill into their free data feed.</td></tr>
-          <tr><td>CORS</td><td>Locked to your own domain. A read-only API is not a reason to leave it open.</td></tr>
-          <tr><td>Input</td><td>Validate every query parameter with a schema. Parameterised SQL everywhere, no string building.</td></tr>
-          <tr><td>Feed content</td><td>Sanitise HTML pulled from RSS before you store it. Feeds can carry scripts, and this is a real XSS route into your own pages.</td></tr>
-          <tr><td>Admin panel</td><td>Its own subdomain, behind login plus two-factor, ideally IP-restricted. Never share a session with the public site.</td></tr>
-          <tr><td>Backups</td><td>Nightly Postgres dump to storage that is not the same server. Restore it once, on purpose, before you need to.</td></tr>
+          <tr><td>API keys</td><td>Stored with <code>wrangler secret put</code>, encrypted at Cloudflare. <span class="warn">Never</span> a <code>VITE_</code> or <code>NEXT_PUBLIC_</code> variable &mdash; those are compiled into the bundle for anyone to read.</td></tr>
+          <tr><td>Verify it</td><td>After each build, grep the client bundle for the provider host and the key name. Both should return zero files. The only thing the browser should know about is <code>/api/v1/market/ticker</code>.</td></tr>
+          <tr><td>Server-only code</td><td>TanStack Start blocks any import from <code>src/server/</code> into client code, and fails the build if you try. Keep genuinely secret logic there and the compiler enforces it for you.</td></tr>
+          <tr><td>Local secrets</td><td><code>.env</code> and <code>.dev.vars</code> are gitignored; only <code>.env.example</code> is committed, with no values in it.</td></tr>
+          <tr><td>CORS</td><td>No cross-origin header is set, so the API is same-origin by default. A read-only API is not a reason to open it.</td></tr>
+          <tr><td>Rate limiting</td><td>Cloudflare's free tier covers the basics. Worth a rule on <code>/api/*</code> before the newsroom brings real traffic.</td></tr>
+          <tr><td>Feed content</td><td>When the newsroom lands: sanitise HTML pulled from RSS before storing it. Feeds carry scripts, and that is a real route into your own pages.</td></tr>
+          <tr><td>Admin panel</td><td>When it exists: its own subdomain, behind login and two-factor. Never sharing a session with the public site.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <section id="deploy">
-    <p class="kicker">08 &mdash; Hosting</p>
-    <h2>Running it on Hostinger</h2>
-    <div class="col">
-      <p><strong>Use a VPS, not shared hosting.</strong> Shared plans are built for PHP and cannot reliably keep a Node process, a background worker, Redis and Postgres alive. A KVM 2 is a comfortable starting point.</p>
-      <p>Everything runs as containers from a single <code>docker-compose.yml</code>, which means rebuilding the whole stack on a fresh machine takes about ten minutes. That file is also your disaster-recovery plan.</p>
+  <section id="hosting">
+    <p class="kicker">09 &mdash; Hosting</p>
+    <h2>Cloudflare Workers, nothing a month</h2>
+
+    <div class="decision correction">
+      <span class="tag">Correction to version 1</span>
+      <p>Version 1 planned a Hostinger VPS with Docker Compose, Nginx, PostgreSQL and Redis. <strong>The available plan turned out to be Premium Web Hosting</strong>, which is PHP and MySQL only &mdash; it cannot run a Node process at all. Hostinger offers Node.js on Business and Cloud plans, not Premium.</p>
+      <p>Rather than pay for an upgrade that would still be outgrown once the newsroom needs a database, the whole application moved to Cloudflare Workers. It costs nothing, it is faster, and the build already targeted it.</p>
     </div>
 
-    <div class="tscroll">
-      <table>
-        <thead>
-          <tr><th>Container</th><th>Job</th></tr>
-        </thead>
-        <tbody>
-          <tr><td class="mono">nginx</td><td>Reverse proxy, TLS, compression, per-IP rate limits</td></tr>
-          <tr><td class="mono">web</td><td>Next.js &mdash; renders the pages</td></tr>
-          <tr><td class="mono">api</td><td>The read-only JSON API</td></tr>
-          <tr><td class="mono">worker</td><td>Price and news ingestion on a schedule</td></tr>
-          <tr><td class="mono">postgres</td><td>Articles, topics, coins, authors</td></tr>
-          <tr><td class="mono">redis</td><td>Live snapshot, response cache, rate-limit counters</td></tr>
-        </tbody>
-      </table>
+    <div class="col">
+      <p>Two commands do everything:</p>
     </div>
+
+    <pre><b>npm run preview:cf</b>   <i># build, then run the real Worker locally</i>
+<b>npm run deploy</b>       <i># build, then wrangler deploy</i>
+
+<i># the API key, stored encrypted at Cloudflare, never in the repo</i>
+<b>npx wrangler secret put COINGECKO_API_KEY</b></pre>
 
     <div class="col" style="margin-top:22px">
-      <p>Deploys run from GitHub Actions: build the images, SSH in, <code>docker compose pull &amp;&amp; up -d</code>. Keep a staging stack on the same box with its own database so you can test a feed change without breaking the live site.</p>
-      <p><strong>When traffic grows</strong>, nothing here gets rewritten. The API is stateless, so you run two or three copies behind Nginx. Then a Postgres read replica. Then the workers move to their own small box. That is the whole scale path.</p>
+      <p>The Hostinger plan still earns its keep: it holds the domain and the email. Only the application moved.</p>
+      <p><strong>A Node build is kept alongside</strong> &mdash; <code>npm run build:node</code> produces a standalone server for a VPS. The cache interface means the same code runs either way, so moving back later is a deployment change rather than a rewrite.</p>
+      <p><strong>When the newsroom arrives</strong>, articles need storage. Cloudflare D1 and Cron Triggers cover it on the same free plan, which keeps the whole thing on one platform. A VPS with PostgreSQL remains the alternative if the editorial side grows past what D1 is comfortable with.</p>
     </div>
   </section>
 
   <section id="repo">
-    <p class="kicker">09 &mdash; Code layout</p>
-    <h2>One repository, clear seams</h2>
+    <p class="kicker">10 &mdash; Code layout</p>
+    <h2>Where things live</h2>
 
-    <pre><b>aadicrypto/</b>
-├── apps/
-│   ├── <b>web/</b>          <i>Next.js — the site you already designed</i>
-│   ├── <b>api/</b>          <i>public read-only API</i>
-│   └── <b>worker/</b>       <i>scheduled ingestion jobs</i>
-├── packages/
-│   ├── <b>types/</b>        <i>shared TypeScript types — one contract, both sides</i>
-│   ├── <b>db/</b>           <i>schema + migrations</i>
-│   └── <b>adapters/</b>     <i>one file per data provider</i>
-├── docker-compose.yml
-└── .github/workflows/</pre>
+    <pre><b>src/</b>
+├── <b>types/market.ts</b>              <i>the wire contract, shared by both sides</i>
+├── <b>server/</b>                      <i>blocked from client imports by the build</i>
+│   ├── market-source.ts         <i>fetch · normalise · fall back</i>
+│   ├── market-cache.ts          <i>Cache API on Workers, Map on Node</i>
+│   └── api.ts                   <i>GET /api/v1/market/ticker</i>
+├── <b>lib/market-fn.ts</b>             <i>server fn — must sit outside server/</i>
+├── <b>routes/</b>                      <i>file-based, SSR, per-route meta</i>
+├── <b>components/site/</b>
+│   ├── useMarketTicker.ts       <i>one shared poll, deduped</i>
+│   └── ComingSoon.tsx           <i>honest placeholder</i>
+└── <b>data/</b>                        <i>taxonomy and editorial lists</i></pre>
 
     <div class="col" style="margin-top:22px">
-      <p>The <code>packages/types</code> folder matters more than it looks. When the API and the frontend share one set of types, a breaking change fails at build time instead of showing up as a blank widget on the live home page.</p>
-      <p>And <code>packages/adapters</code> is where every third-party quirk is allowed to live. Everything past that line speaks your schema and nobody else's.</p>
+      <p><code>types/market.ts</code> matters more than it looks. When the API and the pages share one set of types, a breaking change fails at build time instead of appearing as a blank widget on the live home page.</p>
+      <p><code>lib/market-fn.ts</code> sits outside <code>server/</code> on purpose. The build refuses any client import from <code>server/</code>, and the server-function bridge has to be importable by the client &mdash; the plugin swaps it for a remote call there.</p>
     </div>
   </section>
 
-  <section id="open">
-    <p class="kicker">10 &mdash; Still open</p>
-    <h2>Decisions that change the build</h2>
+  <section id="lessons">
+    <p class="kicker">11 &mdash; What real data taught us</p>
+    <h2>Five things no amount of planning would have caught</h2>
     <div class="col">
-      <p>The architecture above holds either way on all of these, but the sizing and the data sources depend on the answers.</p>
+      <p>Each of these was found by running the thing, not by thinking about it. They are recorded because every one of them would otherwise be rediscovered the expensive way.</p>
+    </div>
+
+    <ol class="layers">
+      <li>
+        <span class="num">01 &mdash; 403, NOT 429</span>
+        <h3>Workers send no User-Agent</h3>
+        <p>CoinGecko rejects requests without one. Node happens to send a default, so this worked perfectly in local development and failed everywhere else. Upstream calls now set an explicit User-Agent.</p>
+      </li>
+      <li>
+        <span class="num">02 &mdash; NO I/O AT MODULE SCOPE</span>
+        <h3>A cache-warming call would have failed the deploy</h3>
+        <p>Warming the cache at boot is sensible on a Node server and forbidden on Workers, which reject any I/O in global scope. One line, written for the old runtime, would have broken the first deploy outright.</p>
+      </li>
+      <li>
+        <span class="num">03 &mdash; SUB-CENT COINS</span>
+        <h3>$0.0000</h3>
+        <p>Price formatting capped at four decimal places. With ten hand-picked coins nothing traded that low; with the real top hundred, SHIB and PEPE both flatlined to zero. They now render eight decimals.</p>
+      </li>
+      <li>
+        <span class="num">04 &mdash; A 200 IS NOT ALWAYS SUCCESS</span>
+        <h3>An empty list poisoned a six-hour cache</h3>
+        <p>A sector endpoint returning <code>200</code> with an empty array was treated as a good answer and cached, blanking that tab until the next restart. Success now requires actual rows.</p>
+      </li>
+      <li>
+        <span class="num">05 &mdash; RATE LIMITS ARE BURSTY</span>
+        <h3>Seven calls at once earns a 429</h3>
+        <p>The per-minute allowance is not the whole story. Firing every call together reliably failed even while well under the stated budget. Splitting slow-moving data onto its own clocks fixed it, and a free demo key raised the ceiling from roughly ten calls a minute to thirty.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <p class="kicker">12 &mdash; Still open</p>
+    <h2>Decisions the newsroom will force</h2>
+    <div class="col">
+      <p>The architecture above holds either way on all of these, but they shape what gets built next.</p>
       <ul class="plain">
-        <li><strong>Traffic.</strong> Hundreds a day or tens of thousands? Changes the VPS size and nothing else.</li>
-        <li><strong>Where the news comes from.</strong> Written in-house, pulled from feeds, or both? Pure aggregation has copyright limits; a mix is usually the safest place to land.</li>
-        <li><strong>Which Hostinger plan is already bought.</strong> If it is shared hosting, the frontend and the API have to be split across two places.</li>
-        <li><strong>How India-focused the site is.</strong> The site already has an India section and INR pricing, which changes both the price source and the feed list.</li>
-        <li><strong>Whether editors need an admin panel</strong>, or the whole thing runs automatically.</li>
+        <li><strong>Where the news comes from.</strong> Written in-house, pulled from feeds, or both. Pure aggregation has copyright limits; a mix is usually the safest place to land.</li>
+        <li><strong>Where articles are stored.</strong> Cloudflare D1 keeps everything on one free platform. PostgreSQL on a VPS is more familiar and more capable. This is the next real fork.</li>
+        <li><strong>Whether editors need an admin panel</strong>, or the pipeline runs unattended.</li>
+        <li><strong>How India-focused the site is.</strong> There is an India section and INR pricing already, which changes both the price source and the feed list.</li>
+        <li><strong>When to lift <code>noindex</code>.</strong> Recommended: once the newsroom has real stories, not before.</li>
+        <li><strong>The "New" market tab</strong> is gone for now &mdash; the free tier has no recently-listed feed, and an invented one is worse than none.</li>
       </ul>
     </div>
   </section>
 
   <footer>
     <span>AadiCrypto &mdash; platform architecture</span>
-    <span>Draft 1 &middot; 19 Sep 2026</span>
-    <span>Next: data sources &amp; schema</span>
+    <span>Version 2 &middot; 2 Oct 2026</span>
+    <span>Supersedes v1 of 19 Sep</span>
   </footer>
 
 </div>
