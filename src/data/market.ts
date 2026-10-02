@@ -151,12 +151,39 @@ export const coins: Coin[] = [
   },
 ];
 
+/**
+ * Market table tabs.
+ *
+ * "New" is gone for now: CoinGecko's free tier has no recently-listed feed, and
+ * an invented one is worse than none. It comes back with a paid tier or once we
+ * track listings ourselves.
+ */
+/**
+ * Coins the header strip headlines, in order.
+ *
+ * An editorial choice, not simply the top ten by market cap — that ordering
+ * fills the strip with stablecoins pinned at $1 and whatever tokenised asset
+ * happens to be large this week. Any symbol missing from the top hundred is
+ * skipped rather than leaving a gap.
+ */
+export const headlineSymbols = [
+  "BTC",
+  "ETH",
+  "SOL",
+  "BNB",
+  "XRP",
+  "DOGE",
+  "ADA",
+  "TRX",
+  "LINK",
+  "AVAX",
+] as const;
+
 export const marketTabs = [
   { id: "all", label: "All" },
   { id: "gainers", label: "Gainers" },
   { id: "losers", label: "Losers" },
   { id: "trending", label: "Trending" },
-  { id: "new", label: "New" },
   { id: "defi", label: "DeFi" },
   { id: "ai", label: "AI" },
   { id: "rwa", label: "RWA" },

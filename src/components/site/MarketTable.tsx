@@ -1,30 +1,56 @@
 import { labelLink, SiteLink } from "./links";
 import { useMemo, useState } from "react";
 import { Star } from "lucide-react";
-import { coins, marketTabs } from "@/data/market";
+import { marketTabs } from "@/data/market";
+import type { TickerCoin } from "@/types/market";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { useCurrency } from "./currency";
+import { useMarketTicker } from "./useMarketTicker";
 import { Delta, Sparkline } from "./Delta";
+
+/** How many rows the home page shows before "View all cryptocurrencies". */
+const HOME_ROWS = 20;
+
+/**
+ * Gainers and losers are derived here rather than tagged upstream, so the tab a
+ * coin lands in can never disagree with the 24h figure printed next to it.
+ */
+function filterRows(coins: TickerCoin[], tab: string): TickerCoin[] {
+  if (tab === "gainers") {
+    return coins.filter((c) => c.h24 > 0).sort((a, b) => b.h24 - a.h24);
+  }
+  if (tab === "losers") {
+    return coins.filter((c) => c.h24 < 0).sort((a, b) => a.h24 - b.h24);
+  }
+  if (tab === "all") return coins;
+  return coins.filter((c) => c.tags.includes(tab));
+}
 
 export function MarketTable() {
   const { currency } = useCurrency();
+  const { coins, updatedAt, stale } = useMarketTicker();
   const [tab, setTab] = useState<string>("all");
   const [watched, setWatched] = useState<string[]>([]);
 
-  const rows = useMemo(
-    () =>
-      tab === "all"
-        ? coins
-        : coins.filter((c) => (c.tags as readonly string[]).includes(tab)),
-    [tab],
-  );
+  const rows = useMemo(() => filterRows(coins, tab).slice(0, HOME_ROWS), [coins, tab]);
 
   return (
     <section aria-label="Crypto market" className="container-page py-9">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h2 className="text-[24px] font-extrabold text-ink">Crypto Market</h2>
         <p className="tabular text-[12.5px] text-muted-foreground">
-          Illustrative data · prices shown in {currency}
+          {stale ? "Last known prices" : "Live prices"} · shown in {currency}
+          {updatedAt !== new Date(0).toISOString() && (
+            <>
+              {" · updated "}
+              <time dateTime={updatedAt}>
+                {new Date(updatedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+            </>
+          )}
         </p>
       </div>
 
@@ -92,7 +118,10 @@ export function MarketTable() {
             {rows.map((c) => {
               const isWatched = watched.includes(c.symbol);
               return (
-                <tr key={c.symbol} className="border-b border-border transition-colors hover:bg-surface">
+                <tr
+                  key={c.symbol}
+                  className="border-b border-border transition-colors hover:bg-surface"
+                >
                   <td className="tabular py-3 pl-1 text-muted-foreground">{c.rank}</td>
                   <td className="py-3">
                     <SiteLink
@@ -160,7 +189,7 @@ export function MarketTable() {
 
       {rows.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          No assets in this view yet.
+          Nothing in this view right now.
         </p>
       )}
 

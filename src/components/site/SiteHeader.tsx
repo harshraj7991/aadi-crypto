@@ -4,6 +4,7 @@ import { Bell, Briefcase, Menu, Search, Star, X } from "lucide-react";
 import logo from "@/assets/aadicrypto-logo.png";
 import { labelLink, SiteLink, storyLink } from "./links";
 import type { Currency } from "@/data/market";
+import { headlineSymbols } from "@/data/market";
 import type { MarketTicker } from "@/types/market";
 import { breaking } from "@/data/news";
 import { formatCompact, formatPrice } from "@/lib/format";
@@ -265,11 +266,17 @@ function IconButton({ label, children }: { label: string; children: React.ReactN
 function Ticker() {
   const { currency } = useCurrency();
   const { coins } = useMarketTicker();
+  // Keep the editorial order from headlineSymbols, drop anything not in the
+  // top hundred rather than leaving a hole in the strip.
+  const bySymbol = new Map(coins.map((coin) => [coin.symbol, coin]));
+  const headline = headlineSymbols
+    .map((symbol) => bySymbol.get(symbol))
+    .filter((coin): coin is NonNullable<typeof coin> => coin !== undefined);
   return (
     <div className="border-b border-border bg-surface-cool">
       <div className="container-page scroll-x">
         <ul className="flex items-center gap-6 whitespace-nowrap py-2">
-          {coins.map((c) => (
+          {headline.map((c) => (
             <li key={c.symbol} className="flex shrink-0 items-center gap-2 text-[13px]">
               <span className="font-bold text-ink">{c.symbol}</span>
               <span className="tabular text-ink">{formatPrice(c.price, currency)}</span>

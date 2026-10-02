@@ -22,6 +22,12 @@ export type TickerCoin = {
   volume: number;
   /** Twelve evenly spaced points from the provider's 7-day series. */
   spark: number[];
+  /**
+   * Sector and trending labels the market table filters on. Gainers and losers
+   * are not in here — those are derived from `h24` at render time so they can
+   * never disagree with the number on screen.
+   */
+  tags: string[];
 };
 
 export type TickerGlobals = {
@@ -38,6 +44,7 @@ export type MarketTicker = {
   fearGreed: { value: number; label: string } | null;
   /** Null unless ETHERSCAN_API_KEY is set. */
   gas: { gwei: number } | null;
+  /** Top 100 by market cap, highest first. The header strip shows the first ten. */
   coins: TickerCoin[];
   /** ISO timestamp of the upstream fetch this data came from. */
   updatedAt: string;

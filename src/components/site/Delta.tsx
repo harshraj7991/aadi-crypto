@@ -47,6 +47,9 @@ function Caret({ up }: { up: boolean }) {
 }
 
 export function Sparkline({ points, up }: { points: number[]; up: boolean }) {
+  // A provider can return an empty series; Math.min of nothing is Infinity and
+  // the path comes out as NaN, which renders as a stray line across the cell.
+  if (points.length < 2) return <span className="inline-block h-5 w-16" aria-hidden="true" />;
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;

@@ -16,26 +16,42 @@
 import { coins as demoCoins } from "@/data/market";
 import type { MarketTicker, TickerCoin } from "@/types/market";
 
-const TICKER_TTL_MS = 10_000;
+/**
+ * CoinGecko without a key is throttled per IP at roughly five to fifteen calls
+ * a minute, which a ten-second refresh (two calls each) reliably exceeds — you
+ * get 429s and the strip quietly falls back to the last good copy. A free demo
+ * key lifts the ceiling to thirty a minute, which ten seconds fits inside.
+ *
+ * So the refresh matches whether a key is configured. The browser keeps polling
+ * every ten seconds either way; without a key it simply gets more cache hits.
+ */
+const TICKER_TTL_MS = process.env["COINGECKO_API_KEY"] ? 10_000 : 30_000;
 const FEAR_GREED_TTL_MS = 60 * 60 * 1000; // the index only moves once a day
+const TRENDING_TTL_MS = 5 * 60 * 1000; // trending turns over in minutes, not seconds
+const SECTOR_TTL_MS = 6 * 60 * 60 * 1000; // which coins are "DeFi" barely changes
 const UPSTREAM_TIMEOUT_MS = 8_000;
 const SPARK_POINTS = 12;
+const COIN_COUNT = 100;
 
 const COINGECKO = "https://api.coingecko.com/api/v3";
 
-/** Provider ids paired with the labels the site already uses. */
-const TRACKED_COINS = [
-  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
-  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
-  { id: "tether", symbol: "USDT", name: "Tether" },
-  { id: "solana", symbol: "SOL", name: "Solana" },
-  { id: "binancecoin", symbol: "BNB", name: "BNB" },
-  { id: "ripple", symbol: "XRP", name: "XRP" },
-  { id: "dogecoin", symbol: "DOGE", name: "Dogecoin" },
-  { id: "the-open-network", symbol: "TON", name: "Toncoin" },
-  { id: "chainlink", symbol: "LINK", name: "Chainlink" },
-  { id: "ondo-finance", symbol: "ONDO", name: "Ondo" },
-] as const;
+/**
+ * Sector tabs in the market table, mapped to CoinGecko category ids.
+ *
+ * Membership is fetched on its own six-hour clock, so these cost four calls
+ * every six hours rather than four on every refresh.
+ */
+const SECTORS: ReadonlyArray<{ tag: string; category: string }> = [
+  { tag: "defi", category: "decentralized-finance-defi" },
+  { tag: "ai", category: "artificial-intelligence" },
+  { tag: "rwa", category: "real-world-assets-rwa" },
+  { tag: "memes", category: "meme-token" },
+];
+
+const SECTOR_TAGS = new Set(SECTORS.map((sector) => sector.tag));
+
+/** Spacing between background calls, so they never arrive as a burst. */
+const METADATA_GAP_MS = 1_500;
 
 // ---------------------------------------------------------------- fallback
 
@@ -62,6 +78,7 @@ const DEMO_TICKER: MarketTicker = {
     marketCap: coin.marketCap,
     volume: coin.volume,
     spark: coin.spark,
+    tags: coin.tags.filter((tag) => SECTOR_TAGS.has(tag)),
   })),
   updatedAt: new Date(0).toISOString(),
   stale: true,
@@ -74,6 +91,8 @@ type Slot<T> = { value: T; fetchedAt: number };
 
 let tickerCache: Slot<MarketTicker> | undefined;
 let fearGreedCache: Slot<MarketTicker["fearGreed"]> | undefined;
+let trendingCache: Slot<Set<string>> | undefined;
+let sectorCache: Slot<Map<string, string[]>> | undefined;
 let inFlight: Promise<MarketTicker> | undefined;
 let lastGood: MarketTicker | undefined;
 
@@ -93,6 +112,12 @@ export async function getMarketTicker(): Promise<MarketTicker> {
 
 /** Fire the first fetch at boot so the first visitor does not pay for it. */
 export function primeMarketTicker(): void {
+  // Never log the key itself — only whether one was found, and what that means
+  // for the refresh rate. Silent fallback to the slow path is hard to diagnose.
+  console.info(
+    `[market] CoinGecko key ${process.env["COINGECKO_API_KEY"] ? "configured" : "NOT set"}` +
+      ` — refreshing every ${TICKER_TTL_MS / 1000}s`,
+  );
   void getMarketTicker();
 }
 
@@ -104,6 +129,7 @@ function refresh(): Promise<MarketTicker> {
     .then((value) => {
       tickerCache = { value, fetchedAt: Date.now() };
       lastGood = value;
+      void refreshMetadata(); // background, deliberately not awaited
       return value;
     })
     .catch((error: unknown) => {
@@ -123,7 +149,10 @@ function refresh(): Promise<MarketTicker> {
 // ------------------------------------------------------------------ upstream
 
 async function buildTicker(): Promise<MarketTicker> {
-  // Globals and coins are required; the other two are nice to have.
+  // Only the calls the page actually needs run here. The slow-moving metadata
+  // (trending, sector membership) refreshes on its own clock in the background,
+  // so it can never compete with these for the provider's rate limit — firing
+  // all seven at once reliably earns a 429 on CoinGecko's free tier.
   const [globals, coins, fearGreed, gas] = await Promise.all([
     fetchGlobals(),
     fetchCoins(),
@@ -131,15 +160,25 @@ async function buildTicker(): Promise<MarketTicker> {
     fetchGas(),
   ]);
 
+  // Sector and trending labels are read from whatever the background refresh
+  // last stored. Empty on the very first build; filled within a few seconds.
+  const trending = trendingCache?.value ?? new Set<string>();
+  const sectors = sectorCache?.value ?? new Map<string, string[]>();
+
   return {
     global: globals,
     fearGreed,
     gas,
-    coins,
+    coins: coins.map((coin) => ({ ...coin, tags: tagsFor(coin.id, trending, sectors) })),
     updatedAt: new Date().toISOString(),
     stale: false,
     source: "live",
   };
+}
+
+function tagsFor(id: string, trending: Set<string>, sectors: Map<string, string[]>): string[] {
+  const tags = sectors.get(id) ?? [];
+  return trending.has(id) ? ["trending", ...tags] : tags;
 }
 
 async function fetchGlobals(): Promise<MarketTicker["global"]> {
@@ -182,42 +221,120 @@ type CoinGeckoMarket = {
   sparkline_in_7d?: { price?: number[] };
 };
 
-async function fetchCoins(): Promise<TickerCoin[]> {
-  const ids = TRACKED_COINS.map((coin) => coin.id).join(",");
+async function fetchCoins(): Promise<Array<Omit<TickerCoin, "tags">>> {
   const url =
-    `${COINGECKO}/coins/markets?vs_currency=usd&ids=${ids}` +
-    `&order=market_cap_desc&sparkline=true&price_change_percentage=1h,24h,7d`;
+    `${COINGECKO}/coins/markets?vs_currency=usd&order=market_cap_desc` +
+    `&per_page=${COIN_COUNT}&page=1&sparkline=true&price_change_percentage=1h,24h,7d`;
 
   const rows = await fetchJson<CoinGeckoMarket[]>(url, coingeckoHeaders());
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("CoinGecko /coins/markets returned no rows");
   }
 
-  const byId = new Map(rows.filter((row) => row.id).map((row) => [row.id as string, row]));
-
-  // Walk our own list, not the provider's, so a missing coin cannot silently
-  // reorder or shorten the strip.
-  const coins: TickerCoin[] = [];
-  for (const [index, tracked] of TRACKED_COINS.entries()) {
-    const row = byId.get(tracked.id);
-    if (!row || typeof row.current_price !== "number") continue;
-    coins.push({
-      id: tracked.id,
+  const coins = rows
+    .filter((row) => row.id && row.symbol && typeof row.current_price === "number")
+    .map((row, index) => ({
+      id: row.id as string,
       rank: row.market_cap_rank ?? index + 1,
-      symbol: tracked.symbol,
-      name: tracked.name,
-      price: row.current_price,
+      symbol: (row.symbol as string).toUpperCase(),
+      name: row.name ?? (row.symbol as string).toUpperCase(),
+      price: row.current_price as number,
       h1: row.price_change_percentage_1h_in_currency ?? 0,
       h24: row.price_change_percentage_24h_in_currency ?? 0,
       d7: row.price_change_percentage_7d_in_currency ?? 0,
       marketCap: row.market_cap ?? 0,
       volume: row.total_volume ?? 0,
       spark: downsample(row.sparkline_in_7d?.price ?? []),
-    });
-  }
+    }));
 
   if (coins.length === 0) throw new Error("CoinGecko returned no usable coins");
   return coins;
+}
+
+/**
+ * Background refresh for the slow-moving labels.
+ *
+ * Runs after a successful ticker build, never as part of one, and strictly one
+ * call at a time with a gap between them. Nothing here is awaited by a request,
+ * so a rate limit or an outage costs an empty tab, never a slow page.
+ */
+let metadataRefreshing = false;
+
+async function refreshMetadata(): Promise<void> {
+  if (metadataRefreshing) return;
+  const now = Date.now();
+  const trendingDue = !trendingCache || now - trendingCache.fetchedAt >= TRENDING_TTL_MS;
+  const sectorsDue = !sectorCache || now - sectorCache.fetchedAt >= SECTOR_TTL_MS;
+  if (!trendingDue && !sectorsDue) return;
+
+  metadataRefreshing = true;
+  try {
+    if (trendingDue) {
+      await refreshTrending();
+      if (sectorsDue) await sleep(METADATA_GAP_MS);
+    }
+    if (sectorsDue) await refreshSectors();
+  } finally {
+    metadataRefreshing = false;
+  }
+}
+
+/** Coins people are actually looking up right now. */
+async function refreshTrending(): Promise<void> {
+  try {
+    const payload = await fetchJson<{ coins?: Array<{ item?: { id?: string } }> }>(
+      `${COINGECKO}/search/trending`,
+      coingeckoHeaders(),
+    );
+    const ids = new Set(
+      (payload.coins ?? []).map((entry) => entry.item?.id).filter((id): id is string => !!id),
+    );
+    if (ids.size > 0) trendingCache = { value: ids, fetchedAt: Date.now() };
+  } catch (error) {
+    console.warn("[market] trending unavailable:", error);
+  }
+}
+
+/** Which coins belong to which sector tab, as coin id -> tags. */
+async function refreshSectors(): Promise<void> {
+  const byCoin = new Map<string, string[]>();
+  let anySucceeded = false;
+
+  for (const [index, { tag, category }] of SECTORS.entries()) {
+    if (index > 0) await sleep(METADATA_GAP_MS);
+    try {
+      const rows = await fetchJson<CoinGeckoMarket[]>(
+        `${COINGECKO}/coins/markets?vs_currency=usd&category=${category}` +
+          `&order=market_cap_desc&per_page=100&page=1&sparkline=false`,
+        coingeckoHeaders(),
+      );
+      // A 200 carrying an empty list is not success — caching that would blank
+      // the tab for the next six hours.
+      if (rows.length === 0) {
+        console.warn(`[market] sector "${tag}" returned no coins`);
+        continue;
+      }
+      anySucceeded = true;
+      for (const row of rows) {
+        if (!row.id) continue;
+        const existing = byCoin.get(row.id);
+        if (existing) existing.push(tag);
+        else byCoin.set(row.id, [tag]);
+      }
+    } catch (error) {
+      console.warn(`[market] sector "${tag}" unavailable:`, error);
+    }
+  }
+
+  // Never replace a good map with a worse one built from failed calls.
+  if (anySucceeded) {
+    sectorCache = { value: byCoin, fetchedAt: Date.now() };
+    console.info(`[market] sector membership refreshed: ${byCoin.size} coins tagged`);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** The index publishes once a day, so it gets its own long cache. */
