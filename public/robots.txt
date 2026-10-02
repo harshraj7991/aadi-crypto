@@ -1,14 +1,9 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Only the home page carries real content today. Every other route is a
+# placeholder and sets its own noindex, so there is nothing to disallow here —
+# crawlers are told per page rather than by path, which stays correct as
+# sections go live one at a time.
 
 User-agent: *
 Allow: /
+
+Sitemap: https://aadicrypto.com/sitemap.xml

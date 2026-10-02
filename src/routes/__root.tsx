@@ -93,7 +93,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Crypto news, live market data and intelligence. Everything happening in crypto, understood in one place.",
       },
       { name: "author", content: "AadiCrypto" },
-      { name: "robots", content: "noindex, nofollow" },
+      // Indexable by default: the home page carries real live market data.
+      // Pages that are still placeholders set their own noindex, so search
+      // engines see the one page worth ranking and none of the empty ones.
+      { name: "robots", content: "index, follow" },
       { property: "og:title", content: "AadiCrypto — Crypto News, Markets & Intelligence" },
       {
         property: "og:description",

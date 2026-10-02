@@ -31,10 +31,10 @@ export function useMarketTicker(): MarketTicker {
     queryKey: marketTickerQueryKey,
     queryFn: fetchTicker,
     initialData: marketTicker,
-    // The server refreshes about once a minute, so polling faster than this
-    // only costs requests for an identical answer.
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    // The server refreshes once a minute in production, so polling faster than
+    // that only spends requests on an identical answer.
+    staleTime: 60_000,
+    refetchInterval: 60_000,
     // A failed poll keeps the last good numbers on screen rather than blanking.
     retry: 1,
   });
