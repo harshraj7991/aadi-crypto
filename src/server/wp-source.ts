@@ -10,6 +10,7 @@
  */
 
 import type { Article, ArticlePage, ArticleSummary, ArticleTerm } from "@/types/article";
+import { authorsByWpId } from "@/data/authors";
 import { readCache, writeCache } from "./market-cache";
 
 const WP = "https://cms.aadicrypto.com/wp-json/wp/v2";
@@ -110,6 +111,7 @@ async function terms(kind: "categories" | "tags"): Promise<Map<number, WpTerm>> 
 
 type WpPost = {
   id: number;
+  author?: number;
   slug: string;
   date_gmt: string;
   modified_gmt: string;
@@ -167,6 +169,40 @@ export function proxyImageUrl(sourceUrl: string): string | null {
   return `/img/${path}`;
 }
 
+/**
+ * The CMS first, then the local registry.
+ *
+ * A hardened WordPress refuses to serve user data at all, which would otherwise
+ * read as "no author" and quietly noindex every story. The registry in
+ * `src/data/authors.ts` is the answer to that, not a workaround for it.
+ */
+function resolveAuthor(post: WpPost): ArticleSummary["author"] {
+  const embedded = post._embedded?.author?.[0];
+  const bio = (embedded?.description ?? "").trim();
+  if (embedded?.name && bio) {
+    return {
+      id: embedded.id ?? 0,
+      name: embedded.name,
+      slug: embedded.slug ?? "author",
+      bio,
+      avatar: embedded.avatar_urls?.["96"] ?? null,
+    };
+  }
+
+  const registered = post.author ? authorsByWpId[post.author] : undefined;
+  if (registered && post.author) {
+    return {
+      id: post.author,
+      name: registered.name,
+      slug: registered.slug,
+      bio: registered.bio,
+      avatar: null,
+    };
+  }
+
+  return null;
+}
+
 function toSummary(
   post: WpPost,
   cats: Map<number, WpTerm>,
@@ -183,8 +219,7 @@ function toSummary(
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
   const proxied = media?.source_url ? proxyImageUrl(media.source_url) : null;
 
-  const wpAuthor = post._embedded?.author?.[0];
-  const bio = (wpAuthor?.description ?? "").trim();
+  const byline = resolveAuthor(post);
 
   const excerpt = stripTags(post.excerpt?.rendered ?? "");
   const words = stripTags(post.content?.rendered ?? post.excerpt?.rendered ?? "").split(
@@ -201,16 +236,7 @@ function toSummary(
     excerpt,
     publishedAt: new Date(`${post.date_gmt}Z`).toISOString(),
     updatedAt: new Date(`${post.modified_gmt}Z`).toISOString(),
-    author:
-      wpAuthor && bio
-        ? {
-            id: wpAuthor.id,
-            name: wpAuthor.name,
-            slug: wpAuthor.slug,
-            bio,
-            avatar: wpAuthor.avatar_urls?.["96"] ?? null,
-          }
-        : null,
+    author: byline,
     category,
     subcategory,
     tags: post.tags
