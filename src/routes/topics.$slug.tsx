@@ -21,6 +21,7 @@ export const Route = createFileRoute("/topics/$slug")({
         { name: "description", content: loaderData.topic.blurb },
         { property: "og:title", content: title },
         { property: "og:description", content: loaderData.topic.blurb },
+        { name: "robots", content: "noindex, follow" },
       ],
     };
   },

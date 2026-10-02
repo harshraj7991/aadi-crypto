@@ -23,6 +23,7 @@ export const Route = createFileRoute("/news/$category/")({
         { name: "description", content: loaderData.category.blurb },
         { property: "og:title", content: title },
         { property: "og:description", content: loaderData.category.blurb },
+        { name: "robots", content: "noindex, follow" },
       ],
     };
   },
