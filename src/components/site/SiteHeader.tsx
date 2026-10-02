@@ -6,7 +6,6 @@ import { labelLink, SiteLink, storyLink } from "./links";
 import type { Currency } from "@/data/market";
 import { headlineSymbols } from "@/data/market";
 import type { MarketTicker } from "@/types/market";
-import { breaking } from "@/data/news";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { CurrencyToggle, useCurrency } from "./currency";
 import { useMarketTicker } from "./useMarketTicker";
@@ -225,26 +224,6 @@ export function SiteHeader() {
             </div>
           </nav>
         )}
-      </div>
-
-      {/* Breaking news bar */}
-      <div className="border-b border-border bg-surface">
-        <div className="container-page flex items-center gap-3 py-2">
-          <span className="kicker shrink-0 rounded-sm bg-primary px-2 py-1 text-primary-foreground">
-            Breaking
-          </span>
-          <div className="scroll-x min-w-0 flex-1">
-            <SiteLink
-              target={storyLink(breaking)}
-              className="block whitespace-nowrap text-[13.5px] font-semibold text-ink hover:text-primary-hover"
-            >
-              {breaking}
-            </SiteLink>
-          </div>
-          <span className="tabular hidden shrink-0 text-xs text-muted-foreground sm:block">
-            Updated 12 min ago
-          </span>
-        </div>
       </div>
     </header>
   );

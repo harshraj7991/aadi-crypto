@@ -1,5 +1,4 @@
 import type { Currency } from "@/data/market";
-import { trendingTopics } from "@/data/market";
 import type { MarketTicker } from "@/types/market";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { useCurrency } from "./currency";
@@ -98,26 +97,6 @@ export function MarketSnapshot() {
           >
             View all markets →
           </SiteLink>
-        </div>
-      </div>
-
-      <div className="border-t border-border bg-background">
-        <div className="container-page flex items-center gap-3 py-3">
-          <span className="kicker shrink-0 text-muted-foreground">Trending now</span>
-          <div className="scroll-x min-w-0 flex-1">
-            <ul className="flex gap-2 whitespace-nowrap">
-              {trendingTopics.map((t) => (
-                <li key={t}>
-                  <SiteLink
-                    target={labelLink(t.replace(/^#/, ""))}
-                    className="inline-flex rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:border-primary hover:text-primary-hover"
-                  >
-                    {t}
-                  </SiteLink>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       </div>
     </section>

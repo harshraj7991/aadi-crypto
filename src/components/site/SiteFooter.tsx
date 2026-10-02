@@ -88,9 +88,10 @@ export function SiteFooter() {
             ))}
           </ul>
           <p className="mt-4 max-w-[90ch] text-[12px] leading-relaxed text-background/60">
-            Market data on this page is illustrative demo data and not investment advice. Crypto
-            assets are volatile and unregulated in many jurisdictions. AadiCrypto never asks for
-            seed phrases or private keys.
+            Market data is provided for information only and is not investment advice. Prices come
+            from third-party providers and may be delayed or incomplete. Crypto assets are volatile
+            and unregulated in many jurisdictions. AadiCrypto never asks for seed phrases or private
+            keys.
           </p>
           <p className="mt-3 text-[12px] text-background/60">
             © {new Date().getFullYear()} AadiCrypto. All rights reserved.

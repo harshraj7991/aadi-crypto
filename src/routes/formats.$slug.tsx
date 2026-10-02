@@ -1,43 +1,19 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useState } from "react";
-import { byFormat, sortArticles, type ContentFormat, type SortKey } from "@/data/articles";
 import { contentFormats } from "@/data/taxonomy";
-import {
-  ArticleList,
-  Breadcrumbs,
-  ChipLinks,
-  HubHeader,
-  SortTabs,
-} from "@/components/site/ArticleBits";
+import { ComingSoonPage } from "@/components/site/ComingSoon";
 
-const formatMap: Record<string, { title: string; blurb: string; formats: ContentFormat[] }> = {
-  analysis: {
-    title: "Analysis",
-    blurb: "What the day's moves and filings actually mean, from the AadiCrypto desks.",
-    formats: ["analysis"],
-  },
-  opinion: {
-    title: "Opinion",
-    blurb: "Argument and commentary from our columnists and outside contributors.",
-    formats: ["opinion"],
-  },
-  explainers: {
-    title: "Explainers",
-    blurb: "Plain-language guides to the mechanics behind the headlines.",
-    formats: ["explainer"],
-  },
-  research: {
-    title: "Research",
-    blurb: "Longer data-led work: market structure, on-chain studies and interviews.",
-    formats: ["research", "interview"],
-  },
+const BLURBS: Record<string, string> = {
+  analysis: "Market analysis that explains what moved, why it moved, and what it changes.",
+  opinion: "Argued positions from named writers, clearly separated from reporting.",
+  explainers: "Plain-English answers to the questions people actually ask about crypto.",
+  research: "Longer-form work: data studies, sector deep dives and original analysis.",
 };
 
 export const Route = createFileRoute("/formats/$slug")({
   loader: ({ params }) => {
-    const hub = formatMap[params.slug];
-    if (!hub) throw notFound();
-    return { hub, slug: params.slug };
+    const format = contentFormats.find((f) => f.slug === params.slug);
+    if (!format) throw notFound();
+    return { format };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -45,45 +21,26 @@ export const Route = createFileRoute("/formats/$slug")({
         meta: [{ title: "Section not found — AadiCrypto" }, { name: "robots", content: "noindex" }],
       };
     }
-    const title = `${loaderData.hub.title} | AadiCrypto`;
+    const title = `${loaderData.format.title} — AadiCrypto`;
+    const description = BLURBS[loaderData.format.slug] ?? "";
     return {
       meta: [
         { title },
-        { name: "description", content: loaderData.hub.blurb },
+        { name: "description", content: description },
         { property: "og:title", content: title },
-        { property: "og:description", content: loaderData.hub.blurb },
-        { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary_large_image" },
+        { property: "og:description", content: description },
       ],
     };
   },
-  component: FormatHub,
+  component: FormatComingSoon,
 });
 
-function FormatHub() {
-  const { hub, slug } = Route.useLoaderData();
-  const [sort, setSort] = useState<SortKey>("latest");
-  const list = sortArticles(byFormat(hub.formats), sort);
-
+function FormatComingSoon() {
+  const { format } = Route.useLoaderData();
   return (
-    <div className="container-page py-8">
-      <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: hub.title }]} />
-      <div className="mt-4">
-        <HubHeader kicker="Sections" title={hub.title} blurb={hub.blurb} />
-      </div>
-      <div className="mt-4">
-        <ChipLinks
-          items={contentFormats
-            .filter((f) => f.slug !== slug)
-            .map((f) => ({ label: f.title, to: "/formats/$slug", params: { slug: f.slug } }))}
-        />
-      </div>
-      <div className="mt-6 max-w-4xl">
-        <SortTabs active={sort} onChange={setSort} />
-        <div className="mt-2">
-          <ArticleList articles={list} />
-        </div>
-      </div>
-    </div>
+    <ComingSoonPage
+      title={format.title}
+      blurb={BLURBS[format.slug] ?? "This section opens once the newsroom is live."}
+    />
   );
 }

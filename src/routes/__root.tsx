@@ -14,7 +14,6 @@ import { fetchMarketTicker } from "@/lib/market-fn";
 import { CurrencyProvider } from "@/components/site/currency";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { DemoNotice } from "@/components/site/DemoNotice";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -152,7 +151,6 @@ function RootComponent() {
           Skip to content
         </a>
         <SiteHeader />
-        <DemoNotice />
         <main id="main">
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
