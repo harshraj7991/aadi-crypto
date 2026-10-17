@@ -22,8 +22,15 @@ export function timeAgo(iso: string): string {
 function Kicker({ article }: { article: ArticleSummary }) {
   return (
     <p className="kicker flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-      <span className="text-primary-hover">{article.subcategory.name}</span>
-      <span aria-hidden="true">·</span>
+      {/* Editors file posts inconsistently, so a desk label is not guaranteed. */}
+      {(article.subcategory ?? article.category) && (
+        <>
+          <span className="text-primary-hover">
+            {(article.subcategory ?? article.category)?.name}
+          </span>
+          <span aria-hidden="true">·</span>
+        </>
+      )}
       <time dateTime={article.publishedAt}>{timeAgo(article.publishedAt)}</time>
     </p>
   );

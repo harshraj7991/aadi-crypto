@@ -11,6 +11,7 @@
 
 import type { Article, ArticlePage, ArticleSummary, ArticleTerm } from "@/types/article";
 import { readCache, writeCache } from "./market-cache";
+import { decodeTitle, splitArticle, stripTags } from "./wp-content";
 
 const WP = "https://cms.aadicrypto.com/wp-json/wp/v2";
 const UPLOADS = "https://cms.aadicrypto.com/wp-content/uploads/";
@@ -23,6 +24,13 @@ const TERMS_TTL_MS = 60 * 60 * 1000; // categories and tags barely move
 const HARD_MULTIPLIER = 6; // how long a stale copy may still be served
 
 export const ARTICLES_PER_PAGE = 20;
+
+/** Canonical article path. Built from the publish date, which never changes. */
+export function articleUrl(published: Date, slug: string): string {
+  const yyyy = published.getUTCFullYear();
+  const mm = String(published.getUTCMonth() + 1).padStart(2, "0");
+  return `/news/${yyyy}/${mm}/${slug}`;
+}
 
 // ------------------------------------------------------------------- fetching
 
@@ -46,6 +54,15 @@ async function wpFetch<T>(
     headers: { accept: "application/json", "user-agent": USER_AGENT },
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
+  // WordPress answers 400 for a page past the end rather than an empty list.
+  // That is a normal thing for a crawler to ask for, not a failure.
+  if (response.status === 400 && path.includes("page=")) {
+    const body = (await response.json().catch(() => null)) as { code?: string } | null;
+    if (body?.code === "rest_post_invalid_page_number") {
+      return { data: [] as unknown as T, total: 0, totalPages: 0 };
+    }
+    throw new Error(`WordPress ${path} responded 400 (${body?.code ?? "unknown"})`);
+  }
   if (!response.ok) throw new Error(`WordPress ${path} responded ${response.status}`);
   return {
     data: (await response.json()) as T,
@@ -134,27 +151,6 @@ type WpPost = {
   };
 };
 
-const stripTags = (html: string): string =>
-  html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#8217;/g, "’")
-    .replace(/&#8220;|&#8221;/g, '"')
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-const decodeTitle = (html: string): string =>
-  html
-    .replace(/&amp;/g, "&")
-    .replace(/&#8217;/g, "’")
-    .replace(/&#8216;/g, "‘")
-    .replace(/&#8220;/g, "“")
-    .replace(/&#8221;/g, "”")
-    .replace(/&#8211;/g, "–")
-    .replace(/&quot;/g, '"')
-    .trim();
-
 /**
  * Images move onto our own domain so Cloudflare caches them. `cms` is DNS-only
  * by design, so a direct upload URL would send every reader straight to shared
@@ -172,13 +168,12 @@ function toSummary(
   cats: Map<number, WpTerm>,
   tagMap: Map<number, WpTerm>,
 ): ArticleSummary | null {
-  // Writers tick the child desk; its parent gives the pillar. A post filed only
-  // against a pillar has no URL under this scheme, so it is held back rather
-  // than published somewhere that 404s.
-  const child = post.categories.map((id) => cats.get(id)).find((c) => c && c.parent);
-  if (!child) return null;
-  const parent = cats.get(child.parent ?? 0);
-  if (!parent) return null;
+  // Categories are a label, not the URL. Editors tick several per post and add
+  // their own, so prefer a child desk when there is one and fall back to
+  // whatever is there — a post is never dropped for how it was filed.
+  const picked = post.categories.map((id) => cats.get(id)).filter((c): c is WpTerm => !!c);
+  const child = picked.find((c) => c.parent);
+  const parent = child ? cats.get(child.parent ?? 0) : picked[0];
 
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
   const proxied = media?.source_url ? proxyImageUrl(media.source_url) : null;
@@ -186,20 +181,30 @@ function toSummary(
   const wpAuthor = post._embedded?.author?.[0];
   const bio = (wpAuthor?.description ?? "").trim();
 
-  const excerpt = stripTags(post.excerpt?.rendered ?? "");
+  const published = new Date(`${post.date_gmt}Z`);
+  const parts = splitArticle(post.content?.rendered ?? "");
+  // WordPress auto-generates the excerpt from the body, which swallows the
+  // summary bullets. The editors' own standfirst is the better summary.
+  const excerpt = parts.subtitle || stripTags(post.excerpt?.rendered ?? "");
   const words = stripTags(post.content?.rendered ?? post.excerpt?.rendered ?? "").split(
     /\s+/,
   ).length;
 
-  const category: ArticleTerm = { name: decodeTitle(parent.name), slug: parent.slug };
-  const subcategory: ArticleTerm = { name: decodeTitle(child.name), slug: child.slug };
+  const category: ArticleTerm | null = parent
+    ? { name: decodeTitle(parent.name), slug: parent.slug }
+    : null;
+  const subcategory: ArticleTerm | null = child
+    ? { name: decodeTitle(child.name), slug: child.slug }
+    : null;
 
   return {
     id: post.id,
     slug: post.slug,
     title: decodeTitle(post.title?.rendered ?? ""),
     excerpt,
-    publishedAt: new Date(`${post.date_gmt}Z`).toISOString(),
+    subtitle: parts.subtitle,
+    summary: parts.summary,
+    publishedAt: published.toISOString(),
     updatedAt: new Date(`${post.modified_gmt}Z`).toISOString(),
     author:
       wpAuthor && bio
@@ -226,7 +231,7 @@ function toSummary(
         }
       : null,
     readingMinutes: Math.max(1, Math.round(words / 220)),
-    url: `/news/${parent.slug}/${child.slug}/${post.slug}`,
+    url: articleUrl(published, post.slug),
   };
 }
 
@@ -234,6 +239,20 @@ function toSummary(
 
 const LIST_FIELDS =
   "id,slug,date_gmt,modified_gmt,title,excerpt,categories,tags,_links,author,featured_media";
+
+/**
+ * A category as WordPress actually has it, not as our static taxonomy expects.
+ *
+ * Editors add their own categories — Blockchain, Legal, Technology and so on —
+ * which have no entry in `src/data/taxonomy.ts`. Looking them up here means a
+ * desk page works the moment an editor creates it, rather than 404ing until
+ * someone edits the codebase.
+ */
+export async function getCategory(slug: string): Promise<ArticleTerm | null> {
+  const cats = await terms("categories");
+  const found = [...cats.values()].find((c) => c.slug === slug);
+  return found ? { name: decodeTitle(found.name), slug: found.slug } : null;
+}
 
 /** One page of published stories, newest first. Optionally filtered by desk. */
 export async function getArticles(
@@ -286,7 +305,10 @@ export async function getArticle(slug: string): Promise<Article | null> {
     if (!post) return null;
     const summary = toSummary(post, cats, tagMap);
     if (!summary) return null;
-    return { ...summary, html: rewriteBodyImages(post.content?.rendered ?? "") };
+    return {
+      ...summary,
+      html: rewriteBodyImages(splitArticle(post.content?.rendered ?? "").body),
+    };
   });
   return value;
 }
