@@ -311,25 +311,22 @@ export const marketsMenu: MarketColumn[] = [
       {
         heading: "On-Chain Analysis",
         view: "onchain",
-        items: items(
-          "/markets/on-chain",
-          [
-            "Bitcoin On-Chain",
-            "Ethereum On-Chain",
-            "Active Addresses",
-            "Transaction Count",
-            "Network Fees",
-            "Hash Rate",
-            "Staking",
-            "TVL",
-            "DEX Volume",
-            "Stablecoin Supply",
-            "MVRV",
-            "NVT",
-            "Realized Cap",
-            "Exchange Reserves",
-          ],
-        ),
+        items: items("/markets/on-chain", [
+          "Bitcoin On-Chain",
+          "Ethereum On-Chain",
+          "Active Addresses",
+          "Transaction Count",
+          "Network Fees",
+          "Hash Rate",
+          "Staking",
+          "TVL",
+          "DEX Volume",
+          "Stablecoin Supply",
+          "MVRV",
+          "NVT",
+          "Realized Cap",
+          "Exchange Reserves",
+        ]),
       },
     ],
   },
@@ -452,7 +449,8 @@ export const marketPages: Record<string, MarketPage> = (() => {
   for (const column of marketsMenu) {
     for (const section of column.sections) {
       for (const item of section.items) {
-        if (!map[item.path]) map[item.path] = { ...item, heading: section.heading, view: section.view };
+        if (!map[item.path])
+          map[item.path] = { ...item, heading: section.heading, view: section.view };
       }
     }
   }

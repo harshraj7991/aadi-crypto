@@ -8,12 +8,13 @@
     "build": "vite build",
     "build:node": "NITRO_PRESET=node-server vite build",
     "start": "node .output/server/index.mjs",
-    "preview:cf": "npm run build && cp .env .output/server/.dev.vars && wrangler dev",
-    "deploy": "npm run build && wrangler deploy",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "tsx src/server/wp-content.test.ts",
+    "preview:cf": "npm run build && node scripts/prepare-deploy.mjs aadicrypto-dev && cp .env .output/server/.dev.vars && wrangler dev",
+    "deploy:dev": "npm run build && node scripts/prepare-deploy.mjs aadicrypto-dev && wrangler deploy",
+    "deploy:prod": "npm run build && node scripts/prepare-deploy.mjs harshraj7991-aadi-crypto && wrangler deploy --domain aadicrypto.com",
     "format": "prettier --write ."
   },
   "overrides": {

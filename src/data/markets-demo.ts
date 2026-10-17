@@ -178,16 +178,86 @@ export type EventRow = {
 };
 
 export const marketEvents: EventRow[] = [
-  { date: "12 Mar", time: "18:00", title: "US CPI release", region: "United States", impact: "High", detail: "Consensus 2.9% year on year" },
-  { date: "13 Mar", time: "23:30", title: "Federal Reserve rate decision", region: "United States", impact: "High", detail: "Market prices no change" },
-  { date: "14 Mar", time: "12:00", title: "Ethereum protocol upgrade rehearsal", region: "Global", impact: "Medium", detail: "Testnet fork window" },
-  { date: "15 Mar", time: "16:30", title: "US jobs data", region: "United States", impact: "High", detail: "Non-farm payrolls" },
-  { date: "17 Mar", time: "09:00", title: "ETF decision deadline", region: "United States", impact: "High", detail: "Spot altcoin fund review" },
-  { date: "18 Mar", time: "05:30", title: "India digital asset committee briefing", region: "India", impact: "Medium", detail: "Tax framework consultation" },
-  { date: "19 Mar", time: "14:00", title: "Euro area inflation print", region: "Europe", impact: "Medium", detail: "Flash estimate" },
-  { date: "21 Mar", time: "11:00", title: "Large token unlock", region: "Global", impact: "Medium", detail: "$212M cliff release" },
-  { date: "24 Mar", time: "19:00", title: "GDP revision", region: "United States", impact: "Low", detail: "Second estimate" },
-  { date: "26 Mar", time: "10:00", title: "Layer 2 mainnet hard fork", region: "Global", impact: "Medium", detail: "Fee market change" },
+  {
+    date: "12 Mar",
+    time: "18:00",
+    title: "US CPI release",
+    region: "United States",
+    impact: "High",
+    detail: "Consensus 2.9% year on year",
+  },
+  {
+    date: "13 Mar",
+    time: "23:30",
+    title: "Federal Reserve rate decision",
+    region: "United States",
+    impact: "High",
+    detail: "Market prices no change",
+  },
+  {
+    date: "14 Mar",
+    time: "12:00",
+    title: "Ethereum protocol upgrade rehearsal",
+    region: "Global",
+    impact: "Medium",
+    detail: "Testnet fork window",
+  },
+  {
+    date: "15 Mar",
+    time: "16:30",
+    title: "US jobs data",
+    region: "United States",
+    impact: "High",
+    detail: "Non-farm payrolls",
+  },
+  {
+    date: "17 Mar",
+    time: "09:00",
+    title: "ETF decision deadline",
+    region: "United States",
+    impact: "High",
+    detail: "Spot altcoin fund review",
+  },
+  {
+    date: "18 Mar",
+    time: "05:30",
+    title: "India digital asset committee briefing",
+    region: "India",
+    impact: "Medium",
+    detail: "Tax framework consultation",
+  },
+  {
+    date: "19 Mar",
+    time: "14:00",
+    title: "Euro area inflation print",
+    region: "Europe",
+    impact: "Medium",
+    detail: "Flash estimate",
+  },
+  {
+    date: "21 Mar",
+    time: "11:00",
+    title: "Large token unlock",
+    region: "Global",
+    impact: "Medium",
+    detail: "$212M cliff release",
+  },
+  {
+    date: "24 Mar",
+    time: "19:00",
+    title: "GDP revision",
+    region: "United States",
+    impact: "Low",
+    detail: "Second estimate",
+  },
+  {
+    date: "26 Mar",
+    time: "10:00",
+    title: "Layer 2 mainnet hard fork",
+    region: "Global",
+    impact: "Medium",
+    detail: "Fee market change",
+  },
 ];
 
 export type FundRow = {
@@ -202,12 +272,66 @@ export type FundRow = {
 };
 
 export const etfFunds: FundRow[] = [
-  { name: "Northline Bitcoin Trust", ticker: "NBTC", asset: "Bitcoin", aum: 21_400_000_000, flow24: 128_000_000, flow7: 412_000_000, volume: 1_240_000_000, fee: 0.19 },
-  { name: "Harborcrest Bitcoin Fund", ticker: "HBTF", asset: "Bitcoin", aum: 14_800_000_000, flow24: -64_000_000, flow7: 96_000_000, volume: 820_000_000, fee: 0.25 },
-  { name: "Ridgeway Spot Bitcoin", ticker: "RDGB", asset: "Bitcoin", aum: 9_200_000_000, flow24: 41_000_000, flow7: -22_000_000, volume: 610_000_000, fee: 0.21 },
-  { name: "Northline Ether Trust", ticker: "NETH", asset: "Ethereum", aum: 6_100_000_000, flow24: 32_000_000, flow7: 148_000_000, volume: 340_000_000, fee: 0.24 },
-  { name: "Harborcrest Ether Fund", ticker: "HETF", asset: "Ethereum", aum: 3_400_000_000, flow24: -12_000_000, flow7: 18_000_000, volume: 190_000_000, fee: 0.29 },
-  { name: "Meridian Digital Basket", ticker: "MDBX", asset: "Multi-asset", aum: 1_900_000_000, flow24: 8_400_000, flow7: 26_000_000, volume: 74_000_000, fee: 0.42 },
+  {
+    name: "Northline Bitcoin Trust",
+    ticker: "NBTC",
+    asset: "Bitcoin",
+    aum: 21_400_000_000,
+    flow24: 128_000_000,
+    flow7: 412_000_000,
+    volume: 1_240_000_000,
+    fee: 0.19,
+  },
+  {
+    name: "Harborcrest Bitcoin Fund",
+    ticker: "HBTF",
+    asset: "Bitcoin",
+    aum: 14_800_000_000,
+    flow24: -64_000_000,
+    flow7: 96_000_000,
+    volume: 820_000_000,
+    fee: 0.25,
+  },
+  {
+    name: "Ridgeway Spot Bitcoin",
+    ticker: "RDGB",
+    asset: "Bitcoin",
+    aum: 9_200_000_000,
+    flow24: 41_000_000,
+    flow7: -22_000_000,
+    volume: 610_000_000,
+    fee: 0.21,
+  },
+  {
+    name: "Northline Ether Trust",
+    ticker: "NETH",
+    asset: "Ethereum",
+    aum: 6_100_000_000,
+    flow24: 32_000_000,
+    flow7: 148_000_000,
+    volume: 340_000_000,
+    fee: 0.24,
+  },
+  {
+    name: "Harborcrest Ether Fund",
+    ticker: "HETF",
+    asset: "Ethereum",
+    aum: 3_400_000_000,
+    flow24: -12_000_000,
+    flow7: 18_000_000,
+    volume: 190_000_000,
+    fee: 0.29,
+  },
+  {
+    name: "Meridian Digital Basket",
+    ticker: "MDBX",
+    asset: "Multi-asset",
+    aum: 1_900_000_000,
+    flow24: 8_400_000,
+    flow7: 26_000_000,
+    volume: 74_000_000,
+    fee: 0.42,
+  },
 ];
 
 export type HolderRow = {
@@ -220,13 +344,62 @@ export type HolderRow = {
 };
 
 export const holders: HolderRow[] = [
-  { name: "Arclight Systems", type: "Public company", asset: "BTC", holding: "212,400 BTC", value: 14_500_000_000, change30: 2.4 },
-  { name: "Vanterra Holdings", type: "Public company", asset: "BTC", holding: "48,900 BTC", value: 3_340_000_000, change30: 0 },
-  { name: "Solstice Capital", type: "Fund", asset: "ETH", holding: "610,000 ETH", value: 2_140_000_000, change30: 6.1 },
-  { name: "Kestrel Reserve", type: "Government", asset: "BTC", holding: "94,200 BTC", value: 6_440_000_000, change30: -1.8 },
-  { name: "Blue Meadow Partners", type: "Fund", asset: "Multi-asset", holding: "Mixed basket", value: 980_000_000, change30: 4.2 },
-  { name: "Wallet 0x7f…c41a", type: "Smart money", asset: "ETH", holding: "182,000 ETH", value: 639_000_000, change30: 12.8 },
-  { name: "Wallet bc1q…9ke2", type: "Whale", asset: "BTC", holding: "18,600 BTC", value: 1_270_000_000, change30: -3.4 },
+  {
+    name: "Arclight Systems",
+    type: "Public company",
+    asset: "BTC",
+    holding: "212,400 BTC",
+    value: 14_500_000_000,
+    change30: 2.4,
+  },
+  {
+    name: "Vanterra Holdings",
+    type: "Public company",
+    asset: "BTC",
+    holding: "48,900 BTC",
+    value: 3_340_000_000,
+    change30: 0,
+  },
+  {
+    name: "Solstice Capital",
+    type: "Fund",
+    asset: "ETH",
+    holding: "610,000 ETH",
+    value: 2_140_000_000,
+    change30: 6.1,
+  },
+  {
+    name: "Kestrel Reserve",
+    type: "Government",
+    asset: "BTC",
+    holding: "94,200 BTC",
+    value: 6_440_000_000,
+    change30: -1.8,
+  },
+  {
+    name: "Blue Meadow Partners",
+    type: "Fund",
+    asset: "Multi-asset",
+    holding: "Mixed basket",
+    value: 980_000_000,
+    change30: 4.2,
+  },
+  {
+    name: "Wallet 0x7f…c41a",
+    type: "Smart money",
+    asset: "ETH",
+    holding: "182,000 ETH",
+    value: 639_000_000,
+    change30: 12.8,
+  },
+  {
+    name: "Wallet bc1q…9ke2",
+    type: "Whale",
+    asset: "BTC",
+    holding: "18,600 BTC",
+    value: 1_270_000_000,
+    change30: -3.4,
+  },
 ];
 
 export type IndexRow = {
@@ -258,12 +431,42 @@ export type ResearchRow = {
 };
 
 export const researchNotes: ResearchRow[] = [
-  { title: "Weekly market outlook", desk: "Markets desk", updated: "Updated today", summary: "Liquidity thinned into the weekend while derivatives positioning stayed long." },
-  { title: "Monthly market outlook", desk: "Markets desk", updated: "Updated 4 days ago", summary: "Sector rotation favoured AI and RWA baskets over memecoins." },
-  { title: "Derivatives structure review", desk: "Derivatives desk", updated: "Updated 2 days ago", summary: "Funding normalised after a crowded long unwind near the highs." },
-  { title: "On-chain accumulation study", desk: "Data desk", updated: "Updated 6 days ago", summary: "Long-term holder supply kept rising despite the drawdown." },
-  { title: "Sector rotation tracker", desk: "Research desk", updated: "Updated 1 day ago", summary: "Breadth improved in mid caps while large caps consolidated." },
-  { title: "Institutional flow monitor", desk: "Institutions desk", updated: "Updated today", summary: "Fund flows turned mildly positive across spot vehicles." },
+  {
+    title: "Weekly market outlook",
+    desk: "Markets desk",
+    updated: "Updated today",
+    summary: "Liquidity thinned into the weekend while derivatives positioning stayed long.",
+  },
+  {
+    title: "Monthly market outlook",
+    desk: "Markets desk",
+    updated: "Updated 4 days ago",
+    summary: "Sector rotation favoured AI and RWA baskets over memecoins.",
+  },
+  {
+    title: "Derivatives structure review",
+    desk: "Derivatives desk",
+    updated: "Updated 2 days ago",
+    summary: "Funding normalised after a crowded long unwind near the highs.",
+  },
+  {
+    title: "On-chain accumulation study",
+    desk: "Data desk",
+    updated: "Updated 6 days ago",
+    summary: "Long-term holder supply kept rising despite the drawdown.",
+  },
+  {
+    title: "Sector rotation tracker",
+    desk: "Research desk",
+    updated: "Updated 1 day ago",
+    summary: "Breadth improved in mid caps while large caps consolidated.",
+  },
+  {
+    title: "Institutional flow monitor",
+    desk: "Institutions desk",
+    updated: "Updated today",
+    summary: "Fund flows turned mildly positive across spot vehicles.",
+  },
 ];
 
 export const globalStatsCards = [

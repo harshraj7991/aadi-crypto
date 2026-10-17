@@ -1,4 +1,8 @@
-export type Subcategory = { title: string; slug: string; defaultSort?: "latest" | "most-read" | "editors-pick" };
+export type Subcategory = {
+  title: string;
+  slug: string;
+  defaultSort?: "latest" | "most-read" | "editors-pick";
+};
 export type Category = {
   title: string;
   slug: string;
@@ -26,7 +30,10 @@ export const categories: Category[] = [
       { title: "Bitcoin", slug: "bitcoin" },
       { title: "Ethereum & Layer 2", slug: "ethereum-layer-2" },
       { title: "Solana & High-Performance L1s", slug: "solana-high-performance-l1s" },
-      { title: "Altcoins, Memecoins & Emerging Tokens", slug: "altcoins-memecoins-emerging-tokens" },
+      {
+        title: "Altcoins, Memecoins & Emerging Tokens",
+        slug: "altcoins-memecoins-emerging-tokens",
+      },
     ],
   },
   {
@@ -47,8 +54,14 @@ export const categories: Category[] = [
     subcategories: [
       { title: "Exchanges & Brokers", slug: "exchanges-brokers" },
       { title: "Funding, VC & M&A", slug: "funding-vc-ma" },
-      { title: "Banks, Asset Managers & Corporate Adoption", slug: "banks-asset-managers-corporate-adoption" },
-      { title: "Mining, Validators & Infrastructure Companies", slug: "mining-validators-infrastructure-companies" },
+      {
+        title: "Banks, Asset Managers & Corporate Adoption",
+        slug: "banks-asset-managers-corporate-adoption",
+      },
+      {
+        title: "Mining, Validators & Infrastructure Companies",
+        slug: "mining-validators-infrastructure-companies",
+      },
     ],
   },
   {
@@ -68,8 +81,14 @@ export const categories: Category[] = [
     blurb: "Protocol engineering, wallets, interoperability and emerging decentralized technology.",
     subcategories: [
       { title: "Protocol Upgrades & Scaling", slug: "protocol-upgrades-scaling" },
-      { title: "Wallets, Custody & Account Abstraction", slug: "wallets-custody-account-abstraction" },
-      { title: "Zero-Knowledge, Interoperability & Data", slug: "zero-knowledge-interoperability-data" },
+      {
+        title: "Wallets, Custody & Account Abstraction",
+        slug: "wallets-custody-account-abstraction",
+      },
+      {
+        title: "Zero-Knowledge, Interoperability & Data",
+        slug: "zero-knowledge-interoperability-data",
+      },
       { title: "AI x Crypto, DePIN & Emerging Tech", slug: "ai-crypto-depin-emerging-tech" },
     ],
   },
@@ -90,9 +109,18 @@ export const categories: Category[] = [
     blurb: "Network activity, capital flows, liquidity and the data behind crypto narratives.",
     subcategories: [
       { title: "Network Activity & Fees", slug: "network-activity-fees" },
-      { title: "Whales, Exchange Flows & Holder Behavior", slug: "whales-exchange-flows-holder-behavior" },
-      { title: "DeFi TVL, Stablecoin Flows & Liquidity", slug: "defi-tvl-stablecoin-flows-liquidity" },
-      { title: "Sentiment, Narratives & Developer Activity", slug: "sentiment-narratives-developer-activity" },
+      {
+        title: "Whales, Exchange Flows & Holder Behavior",
+        slug: "whales-exchange-flows-holder-behavior",
+      },
+      {
+        title: "DeFi TVL, Stablecoin Flows & Liquidity",
+        slug: "defi-tvl-stablecoin-flows-liquidity",
+      },
+      {
+        title: "Sentiment, Narratives & Developer Activity",
+        slug: "sentiment-narratives-developer-activity",
+      },
     ],
   },
   {
@@ -112,9 +140,17 @@ export const categories: Category[] = [
     blurb: "Practical education, investigations, commentary and data-led reporting.",
     subcategories: [
       { title: "Explainers & How-To", slug: "explainers-how-to", defaultSort: "most-read" },
-      { title: "Deep Dives & Investigations", slug: "deep-dives-investigations", defaultSort: "editors-pick" },
+      {
+        title: "Deep Dives & Investigations",
+        slug: "deep-dives-investigations",
+        defaultSort: "editors-pick",
+      },
       { title: "Opinion & Commentary", slug: "opinion-commentary", defaultSort: "editors-pick" },
-      { title: "Reports, Interviews & Data Stories", slug: "reports-interviews-data-stories", defaultSort: "editors-pick" },
+      {
+        title: "Reports, Interviews & Data Stories",
+        slug: "reports-interviews-data-stories",
+        defaultSort: "editors-pick",
+      },
     ],
   },
 ];
@@ -126,7 +162,12 @@ export const contentFormats = [
   { title: "Research", slug: "research" },
 ] as const;
 
-export type Topic = { title: string; slug: string; kind: "asset" | "entity" | "theme"; blurb: string };
+export type Topic = {
+  title: string;
+  slug: string;
+  kind: "asset" | "entity" | "theme";
+  blurb: string;
+};
 
 export const topics: Topic[] = [
   {
@@ -188,8 +229,16 @@ export const mainNav = [
     params: { category: "regulation-policy" },
   },
   { label: "DeFi", to: "/news/$category" as const, params: { category: "defi-stablecoins" } },
-  { label: "Business", to: "/news/$category" as const, params: { category: "business-institutions" } },
-  { label: "Tech", to: "/news/$category" as const, params: { category: "technology-web3-infrastructure" } },
+  {
+    label: "Business",
+    to: "/news/$category" as const,
+    params: { category: "business-institutions" },
+  },
+  {
+    label: "Tech",
+    to: "/news/$category" as const,
+    params: { category: "technology-web3-infrastructure" },
+  },
 ];
 
 export function findCategory(slug: string) {

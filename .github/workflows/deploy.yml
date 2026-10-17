@@ -1,0 +1,98 @@
+name: Deploy
+
+# Manual on purpose. Merging runs the checks; shipping stays a decision
+# someone makes, not a side effect of a merge.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        required: true
+        default: dev
+        options:
+          - dev
+          - prod
+
+# Never let two deploys to the same place overlap.
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Deploying something that fails its own checks is not worth the minute
+      # it saves, so the gate runs again here rather than trusting that CI ran
+      # on this commit.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Assert no secrets reached the client
+        run: node scripts/check-bundle.mjs
+
+      - name: Name the worker
+        run: node scripts/prepare-deploy.mjs ${{ vars.WORKER_NAME }}
+
+      # prod owns the custom domain; dev is reachable on its workers.dev URL.
+      - name: Deploy
+        run: |
+          if [ "${{ inputs.environment }}" = "prod" ]; then
+            npx wrangler deploy --domain aadicrypto.com
+          else
+            npx wrangler deploy
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke test
+        run: |
+          BASE="${{ vars.BASE_URL }}"
+          echo "checking $BASE"
+          sleep 10
+          fail=0
+          check () {
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 45 \
+                   -A 'Mozilla/5.0 (CI smoke test)' "$BASE$1")
+            if [ "$code" != "$2" ]; then
+              echo "::error::$1 returned $code, expected $2"; fail=1
+            else
+              echo "ok   $code  $1"
+            fi
+          }
+          check "/" 200
+          check "/news" 200
+          check "/api/v1/market/ticker" 200
+          check "/robots.txt" 200
+          check "/news/2026/10/definitely-not-a-real-story" 404
+          exit $fail
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deployed to ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- worker: \`${{ vars.WORKER_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- url: ${{ vars.BASE_URL }}" >> $GITHUB_STEP_SUMMARY
