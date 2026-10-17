@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 
 import { fetchArticle } from "@/lib/news-fn";
 import { Byline, timeAgo } from "@/components/site/ArticleCards";
@@ -9,12 +9,20 @@ export const Route = createFileRoute("/news/$year/$month/$slug")({
   loader: async ({ params }) => {
     const article = await fetchArticle({ data: params.slug });
     if (!article) throw notFound();
-    // The date in the path comes from the story itself, so a mismatched date
-    // is a wrong address rather than a second one for the same story.
-    if (!article.url.startsWith(`/news/${params.year}/${params.month}/`)) {
-      throw notFound();
-    }
-    return article;
+    if (article.url === `/news/${params.year}/${params.month}/${params.slug}`) return article;
+
+    // Not the canonical address. Two very different reasons for that:
+    //
+    // Stories were published under /news/{desk}/{section}/{slug} for a
+    // fortnight before the move to dated URLs, and that path has the same
+    // three-segment shape as this route. Anyone holding one of those links
+    // gets sent to the real article instead of a dead end.
+    const looksLikeADate = /^\d{4}$/.test(params.year) && /^\d{2}$/.test(params.month);
+    if (!looksLikeADate) throw redirect({ to: article.url, statusCode: 301 });
+
+    // A date-shaped prefix that is simply wrong is a wrong address. Redirecting
+    // those too would let a crawler mint endless variants of every story.
+    throw notFound();
   },
 
   head: ({ loaderData }) => {
