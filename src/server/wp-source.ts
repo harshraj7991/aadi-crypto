@@ -11,6 +11,7 @@
 
 import type { Article, ArticlePage, ArticleSummary, ArticleTerm } from "@/types/article";
 import { readCache, writeCache } from "./market-cache";
+import { decodeTitle, splitArticle, stripTags } from "./wp-content";
 
 const WP = "https://cms.aadicrypto.com/wp-json/wp/v2";
 const UPLOADS = "https://cms.aadicrypto.com/wp-content/uploads/";
@@ -150,112 +151,6 @@ type WpPost = {
   };
 };
 
-const stripTags = (html: string): string =>
-  html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#8217;/g, "’")
-    .replace(/&#8220;|&#8221;/g, '"')
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-const decodeTitle = (html: string): string =>
-  html
-    .replace(/&amp;/g, "&")
-    .replace(/&#8217;/g, "’")
-    .replace(/&#8216;/g, "‘")
-    .replace(/&#8220;/g, "“")
-    .replace(/&#8221;/g, "”")
-    .replace(/&#8211;/g, "–")
-    .replace(/&quot;/g, '"')
-    .trim();
-
-/**
- * Recover the editors' structure from WordPress's flat HTML.
- *
- * Every story is meant to be: a standfirst, a "Quick News Summary" heading,
- * the summary, then the body. In practice the summary arrives in three
- * different shapes depending on who wrote it and which block they used —
- * a real `<ul>`, a run of paragraphs each starting with a bullet character,
- * or plain prose. All three are handled, because asking a dozen writers to
- * markup identically is a losing battle.
- *
- * The heading is the anchor: everything before it is the standfirst,
- * everything immediately after is the summary. That is more reliable than
- * looking for italics, which only some writers use.
- *
- * No heading means no summary box and the body is left completely untouched.
- */
-function splitBody(html: string): { subtitle: string; summary: string[]; body: string } {
-  const heading = html.match(
-    /<h[1-6][^>]*>\s*(?:<strong>)?\s*Quick\s+News\s+Summary:?\s*(?:<\/strong>)?\s*<\/h[1-6]>/i,
-  );
-  if (!heading || heading.index === undefined) {
-    return { subtitle: "", summary: [], body: html.trim() };
-  }
-
-  const before = html.slice(0, heading.index);
-  let cursor = heading.index + heading[0].length;
-
-  // The standfirst is the first paragraph above the heading — not everything
-  // above it, in case a writer puts an image or a second paragraph there too.
-  const firstPara = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(before);
-  const subtitle = stripTags(firstPara?.[1] ?? before);
-
-  const summary: string[] = [];
-
-  // Shape one: list blocks. Plural, because the editor sometimes breaks the
-  // bullets across two <ul> blocks and only taking the first loses half the
-  // summary while leaving the rest stranded in the body.
-  for (;;) {
-    const list = /^\s*<ul[^>]*>([\s\S]*?)<\/ul>/i.exec(html.slice(cursor));
-    if (!list || !list[1]) break;
-    for (const item of list[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)) {
-      const text = stripTags(item[1] ?? "");
-      if (text) summary.push(text);
-    }
-    cursor += list[0].length;
-  }
-
-  if (summary.length === 0) {
-    // Shape two: paragraphs that each begin with a bullet character.
-    const paragraph = /^\s*<p[^>]*>([\s\S]*?)<\/p>/i;
-    for (;;) {
-      const m = paragraph.exec(html.slice(cursor));
-      if (!m || !m[1]) break;
-      const text = stripTags(m[1]);
-      if (!text.startsWith("•")) break;
-      // Writers sometimes run two bullets into one paragraph.
-      for (const part of text.split("•")) {
-        const point = part.trim();
-        if (point) summary.push(point);
-      }
-      cursor += m[0].length;
-    }
-
-    // Shape three: one plain paragraph standing in for the summary. Taken
-    // only when nothing bulleted was found, and only ever one paragraph, so
-    // the worst case is that one lead paragraph moves into the box rather
-    // than the body losing content.
-    if (summary.length === 0) {
-      const m = paragraph.exec(html.slice(cursor));
-      const text = m && m[1] ? stripTags(m[1]) : "";
-      if (text) {
-        summary.push(text);
-        cursor += m![0].length;
-      }
-    }
-  }
-
-  if (summary.length === 0) {
-    // Heading but nothing usable under it — leave the body exactly as written.
-    return { subtitle: "", summary: [], body: html.trim() };
-  }
-
-  return { subtitle, summary, body: html.slice(cursor).trim() };
-}
-
 /**
  * Images move onto our own domain so Cloudflare caches them. `cms` is DNS-only
  * by design, so a direct upload URL would send every reader straight to shared
@@ -287,7 +182,7 @@ function toSummary(
   const bio = (wpAuthor?.description ?? "").trim();
 
   const published = new Date(`${post.date_gmt}Z`);
-  const parts = splitBody(post.content?.rendered ?? "");
+  const parts = splitArticle(post.content?.rendered ?? "");
   // WordPress auto-generates the excerpt from the body, which swallows the
   // summary bullets. The editors' own standfirst is the better summary.
   const excerpt = parts.subtitle || stripTags(post.excerpt?.rendered ?? "");
@@ -412,7 +307,7 @@ export async function getArticle(slug: string): Promise<Article | null> {
     if (!summary) return null;
     return {
       ...summary,
-      html: rewriteBodyImages(splitBody(post.content?.rendered ?? "").body),
+      html: rewriteBodyImages(splitArticle(post.content?.rendered ?? "").body),
     };
   });
   return value;
