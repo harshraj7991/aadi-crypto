@@ -24,6 +24,13 @@ const HARD_MULTIPLIER = 6; // how long a stale copy may still be served
 
 export const ARTICLES_PER_PAGE = 20;
 
+/** Canonical article path. Built from the publish date, which never changes. */
+export function articleUrl(published: Date, slug: string): string {
+  const yyyy = published.getUTCFullYear();
+  const mm = String(published.getUTCMonth() + 1).padStart(2, "0");
+  return `/news/${yyyy}/${mm}/${slug}`;
+}
+
 // ------------------------------------------------------------------- fetching
 
 /**
@@ -46,6 +53,15 @@ async function wpFetch<T>(
     headers: { accept: "application/json", "user-agent": USER_AGENT },
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
+  // WordPress answers 400 for a page past the end rather than an empty list.
+  // That is a normal thing for a crawler to ask for, not a failure.
+  if (response.status === 400 && path.includes("page=")) {
+    const body = (await response.json().catch(() => null)) as { code?: string } | null;
+    if (body?.code === "rest_post_invalid_page_number") {
+      return { data: [] as unknown as T, total: 0, totalPages: 0 };
+    }
+    throw new Error(`WordPress ${path} responded 400 (${body?.code ?? "unknown"})`);
+  }
   if (!response.ok) throw new Error(`WordPress ${path} responded ${response.status}`);
   return {
     data: (await response.json()) as T,
@@ -156,6 +172,91 @@ const decodeTitle = (html: string): string =>
     .trim();
 
 /**
+ * Recover the editors' structure from WordPress's flat HTML.
+ *
+ * Every story is meant to be: a standfirst, a "Quick News Summary" heading,
+ * the summary, then the body. In practice the summary arrives in three
+ * different shapes depending on who wrote it and which block they used —
+ * a real `<ul>`, a run of paragraphs each starting with a bullet character,
+ * or plain prose. All three are handled, because asking a dozen writers to
+ * markup identically is a losing battle.
+ *
+ * The heading is the anchor: everything before it is the standfirst,
+ * everything immediately after is the summary. That is more reliable than
+ * looking for italics, which only some writers use.
+ *
+ * No heading means no summary box and the body is left completely untouched.
+ */
+function splitBody(html: string): { subtitle: string; summary: string[]; body: string } {
+  const heading = html.match(
+    /<h[1-6][^>]*>\s*(?:<strong>)?\s*Quick\s+News\s+Summary:?\s*(?:<\/strong>)?\s*<\/h[1-6]>/i,
+  );
+  if (!heading || heading.index === undefined) {
+    return { subtitle: "", summary: [], body: html.trim() };
+  }
+
+  const before = html.slice(0, heading.index);
+  let cursor = heading.index + heading[0].length;
+
+  // The standfirst is the first paragraph above the heading — not everything
+  // above it, in case a writer puts an image or a second paragraph there too.
+  const firstPara = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(before);
+  const subtitle = stripTags(firstPara?.[1] ?? before);
+
+  const summary: string[] = [];
+
+  // Shape one: list blocks. Plural, because the editor sometimes breaks the
+  // bullets across two <ul> blocks and only taking the first loses half the
+  // summary while leaving the rest stranded in the body.
+  for (;;) {
+    const list = /^\s*<ul[^>]*>([\s\S]*?)<\/ul>/i.exec(html.slice(cursor));
+    if (!list || !list[1]) break;
+    for (const item of list[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)) {
+      const text = stripTags(item[1] ?? "");
+      if (text) summary.push(text);
+    }
+    cursor += list[0].length;
+  }
+
+  if (summary.length === 0) {
+    // Shape two: paragraphs that each begin with a bullet character.
+    const paragraph = /^\s*<p[^>]*>([\s\S]*?)<\/p>/i;
+    for (;;) {
+      const m = paragraph.exec(html.slice(cursor));
+      if (!m || !m[1]) break;
+      const text = stripTags(m[1]);
+      if (!text.startsWith("•")) break;
+      // Writers sometimes run two bullets into one paragraph.
+      for (const part of text.split("•")) {
+        const point = part.trim();
+        if (point) summary.push(point);
+      }
+      cursor += m[0].length;
+    }
+
+    // Shape three: one plain paragraph standing in for the summary. Taken
+    // only when nothing bulleted was found, and only ever one paragraph, so
+    // the worst case is that one lead paragraph moves into the box rather
+    // than the body losing content.
+    if (summary.length === 0) {
+      const m = paragraph.exec(html.slice(cursor));
+      const text = m && m[1] ? stripTags(m[1]) : "";
+      if (text) {
+        summary.push(text);
+        cursor += m![0].length;
+      }
+    }
+  }
+
+  if (summary.length === 0) {
+    // Heading but nothing usable under it — leave the body exactly as written.
+    return { subtitle: "", summary: [], body: html.trim() };
+  }
+
+  return { subtitle, summary, body: html.slice(cursor).trim() };
+}
+
+/**
  * Images move onto our own domain so Cloudflare caches them. `cms` is DNS-only
  * by design, so a direct upload URL would send every reader straight to shared
  * hosting with no CDN in front.
@@ -172,13 +273,12 @@ function toSummary(
   cats: Map<number, WpTerm>,
   tagMap: Map<number, WpTerm>,
 ): ArticleSummary | null {
-  // Writers tick the child desk; its parent gives the pillar. A post filed only
-  // against a pillar has no URL under this scheme, so it is held back rather
-  // than published somewhere that 404s.
-  const child = post.categories.map((id) => cats.get(id)).find((c) => c && c.parent);
-  if (!child) return null;
-  const parent = cats.get(child.parent ?? 0);
-  if (!parent) return null;
+  // Categories are a label, not the URL. Editors tick several per post and add
+  // their own, so prefer a child desk when there is one and fall back to
+  // whatever is there — a post is never dropped for how it was filed.
+  const picked = post.categories.map((id) => cats.get(id)).filter((c): c is WpTerm => !!c);
+  const child = picked.find((c) => c.parent);
+  const parent = child ? cats.get(child.parent ?? 0) : picked[0];
 
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
   const proxied = media?.source_url ? proxyImageUrl(media.source_url) : null;
@@ -186,20 +286,30 @@ function toSummary(
   const wpAuthor = post._embedded?.author?.[0];
   const bio = (wpAuthor?.description ?? "").trim();
 
-  const excerpt = stripTags(post.excerpt?.rendered ?? "");
+  const published = new Date(`${post.date_gmt}Z`);
+  const parts = splitBody(post.content?.rendered ?? "");
+  // WordPress auto-generates the excerpt from the body, which swallows the
+  // summary bullets. The editors' own standfirst is the better summary.
+  const excerpt = parts.subtitle || stripTags(post.excerpt?.rendered ?? "");
   const words = stripTags(post.content?.rendered ?? post.excerpt?.rendered ?? "").split(
     /\s+/,
   ).length;
 
-  const category: ArticleTerm = { name: decodeTitle(parent.name), slug: parent.slug };
-  const subcategory: ArticleTerm = { name: decodeTitle(child.name), slug: child.slug };
+  const category: ArticleTerm | null = parent
+    ? { name: decodeTitle(parent.name), slug: parent.slug }
+    : null;
+  const subcategory: ArticleTerm | null = child
+    ? { name: decodeTitle(child.name), slug: child.slug }
+    : null;
 
   return {
     id: post.id,
     slug: post.slug,
     title: decodeTitle(post.title?.rendered ?? ""),
     excerpt,
-    publishedAt: new Date(`${post.date_gmt}Z`).toISOString(),
+    subtitle: parts.subtitle,
+    summary: parts.summary,
+    publishedAt: published.toISOString(),
     updatedAt: new Date(`${post.modified_gmt}Z`).toISOString(),
     author:
       wpAuthor && bio
@@ -226,7 +336,7 @@ function toSummary(
         }
       : null,
     readingMinutes: Math.max(1, Math.round(words / 220)),
-    url: `/news/${parent.slug}/${child.slug}/${post.slug}`,
+    url: articleUrl(published, post.slug),
   };
 }
 
@@ -234,6 +344,20 @@ function toSummary(
 
 const LIST_FIELDS =
   "id,slug,date_gmt,modified_gmt,title,excerpt,categories,tags,_links,author,featured_media";
+
+/**
+ * A category as WordPress actually has it, not as our static taxonomy expects.
+ *
+ * Editors add their own categories — Blockchain, Legal, Technology and so on —
+ * which have no entry in `src/data/taxonomy.ts`. Looking them up here means a
+ * desk page works the moment an editor creates it, rather than 404ing until
+ * someone edits the codebase.
+ */
+export async function getCategory(slug: string): Promise<ArticleTerm | null> {
+  const cats = await terms("categories");
+  const found = [...cats.values()].find((c) => c.slug === slug);
+  return found ? { name: decodeTitle(found.name), slug: found.slug } : null;
+}
 
 /** One page of published stories, newest first. Optionally filtered by desk. */
 export async function getArticles(
@@ -286,7 +410,10 @@ export async function getArticle(slug: string): Promise<Article | null> {
     if (!post) return null;
     const summary = toSummary(post, cats, tagMap);
     if (!summary) return null;
-    return { ...summary, html: rewriteBodyImages(post.content?.rendered ?? "") };
+    return {
+      ...summary,
+      html: rewriteBodyImages(splitBody(post.content?.rendered ?? "").body),
+    };
   });
   return value;
 }

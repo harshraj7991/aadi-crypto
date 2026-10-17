@@ -28,7 +28,11 @@ export type ArticleSummary = {
   id: number;
   slug: string;
   title: string;
+  /** The italic standfirst editors write as the first line of the body. */
+  subtitle: string;
   excerpt: string;
+  /** The "Quick News Summary" bullets, lifted out of the body. */
+  summary: string[];
   /** ISO 8601, UTC. */
   publishedAt: string;
   updatedAt: string;
@@ -39,14 +43,22 @@ export type ArticleSummary = {
    * named author is withheld rather than published badly.
    */
   author: ArticleAuthor | null;
-  /** The pillar, e.g. Markets. */
-  category: ArticleTerm;
-  /** The desk under it, e.g. Price Action & Market Wraps. */
-  subcategory: ArticleTerm;
+  /**
+   * Best available desk for display. Editors tick several categories per post
+   * and invent new ones, so this is a label, never the URL — see `url`.
+   */
+  category: ArticleTerm | null;
+  subcategory: ArticleTerm | null;
   tags: ArticleTerm[];
   image: ArticleImage | null;
   readingMinutes: number;
-  /** Canonical path on this site, e.g. /news/markets/trading-derivatives/slug */
+  /**
+   * Canonical path, built from the publish date: /news/2026/10/the-slug
+   *
+   * Deliberately not built from categories. Editors tick several per post, so a
+   * category-derived URL changes when they reorder them, and a post with no
+   * child desk would have no URL at all. A publish date never changes.
+   */
   url: string;
 };
 

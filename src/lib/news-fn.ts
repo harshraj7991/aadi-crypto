@@ -8,7 +8,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
-import type { Article, ArticlePage } from "@/types/article";
+import type { Article, ArticlePage, ArticleTerm } from "@/types/article";
 
 export const fetchArticles = createServerFn({ method: "GET" })
   .validator((input: { page?: number; categorySlug?: string; subcategorySlug?: string }) => input)
@@ -22,4 +22,11 @@ export const fetchArticle = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<Article | null> => {
     const { getArticle } = await import("@/server/wp-source");
     return getArticle(data);
+  });
+
+export const fetchCategory = createServerFn({ method: "GET" })
+  .validator((slug: string) => slug)
+  .handler(async ({ data }): Promise<ArticleTerm | null> => {
+    const { getCategory } = await import("@/server/wp-source");
+    return getCategory(data);
   });

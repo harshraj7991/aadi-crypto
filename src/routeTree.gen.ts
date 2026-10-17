@@ -17,8 +17,9 @@ import { Route as MarketsSplatRouteImport } from './routes/markets.$'
 import { Route as NewsIndexRouteImport } from './routes/news.index'
 import { Route as TopicsSlugRouteImport } from './routes/topics.$slug'
 import { Route as NewsCategoryIndexRouteImport } from './routes/news.$category.index'
+import { Route as NewsPagePageRouteImport } from './routes/news.page.$page'
 import { Route as NewsCategorySubcategoryIndexRouteImport } from './routes/news.$category.$subcategory.index'
-import { Route as NewsCategorySubcategorySlugRouteImport } from './routes/news.$category.$subcategory.$slug'
+import { Route as NewsYearMonthSlugRouteImport } from './routes/news.$year.$month.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,18 +61,22 @@ const NewsCategoryIndexRoute = NewsCategoryIndexRouteImport.update({
   path: '/news/$category/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NewsPagePageRoute = NewsPagePageRouteImport.update({
+  id: '/news/page/$page',
+  path: '/news/page/$page',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NewsCategorySubcategoryIndexRoute =
   NewsCategorySubcategoryIndexRouteImport.update({
     id: '/news/$category/$subcategory/',
     path: '/news/$category/$subcategory/',
     getParentRoute: () => rootRouteImport,
   } as any)
-const NewsCategorySubcategorySlugRoute =
-  NewsCategorySubcategorySlugRouteImport.update({
-    id: '/news/$category/$subcategory/$slug',
-    path: '/news/$category/$subcategory/$slug',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const NewsYearMonthSlugRoute = NewsYearMonthSlugRouteImport.update({
+  id: '/news/$year/$month/$slug',
+  path: '/news/$year/$month/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,8 +86,9 @@ export interface FileRoutesByFullPath {
   '/topics/$slug': typeof TopicsSlugRoute
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
+  '/news/page/$page': typeof NewsPagePageRoute
   '/news/$category/': typeof NewsCategoryIndexRoute
-  '/news/$category/$subcategory/$slug': typeof NewsCategorySubcategorySlugRoute
+  '/news/$year/$month/$slug': typeof NewsYearMonthSlugRoute
   '/news/$category/$subcategory/': typeof NewsCategorySubcategoryIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,8 +99,9 @@ export interface FileRoutesByTo {
   '/topics/$slug': typeof TopicsSlugRoute
   '/markets': typeof MarketsIndexRoute
   '/news': typeof NewsIndexRoute
+  '/news/page/$page': typeof NewsPagePageRoute
   '/news/$category': typeof NewsCategoryIndexRoute
-  '/news/$category/$subcategory/$slug': typeof NewsCategorySubcategorySlugRoute
+  '/news/$year/$month/$slug': typeof NewsYearMonthSlugRoute
   '/news/$category/$subcategory': typeof NewsCategorySubcategoryIndexRoute
 }
 export interface FileRoutesById {
@@ -106,8 +113,9 @@ export interface FileRoutesById {
   '/topics/$slug': typeof TopicsSlugRoute
   '/markets/': typeof MarketsIndexRoute
   '/news/': typeof NewsIndexRoute
+  '/news/page/$page': typeof NewsPagePageRoute
   '/news/$category/': typeof NewsCategoryIndexRoute
-  '/news/$category/$subcategory/$slug': typeof NewsCategorySubcategorySlugRoute
+  '/news/$year/$month/$slug': typeof NewsYearMonthSlugRoute
   '/news/$category/$subcategory/': typeof NewsCategorySubcategoryIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,8 +128,9 @@ export interface FileRouteTypes {
     | '/topics/$slug'
     | '/markets/'
     | '/news/'
+    | '/news/page/$page'
     | '/news/$category/'
-    | '/news/$category/$subcategory/$slug'
+    | '/news/$year/$month/$slug'
     | '/news/$category/$subcategory/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,8 +141,9 @@ export interface FileRouteTypes {
     | '/topics/$slug'
     | '/markets'
     | '/news'
+    | '/news/page/$page'
     | '/news/$category'
-    | '/news/$category/$subcategory/$slug'
+    | '/news/$year/$month/$slug'
     | '/news/$category/$subcategory'
   id:
     | '__root__'
@@ -144,8 +154,9 @@ export interface FileRouteTypes {
     | '/topics/$slug'
     | '/markets/'
     | '/news/'
+    | '/news/page/$page'
     | '/news/$category/'
-    | '/news/$category/$subcategory/$slug'
+    | '/news/$year/$month/$slug'
     | '/news/$category/$subcategory/'
   fileRoutesById: FileRoutesById
 }
@@ -157,8 +168,9 @@ export interface RootRouteChildren {
   TopicsSlugRoute: typeof TopicsSlugRoute
   MarketsIndexRoute: typeof MarketsIndexRoute
   NewsIndexRoute: typeof NewsIndexRoute
+  NewsPagePageRoute: typeof NewsPagePageRoute
   NewsCategoryIndexRoute: typeof NewsCategoryIndexRoute
-  NewsCategorySubcategorySlugRoute: typeof NewsCategorySubcategorySlugRoute
+  NewsYearMonthSlugRoute: typeof NewsYearMonthSlugRoute
   NewsCategorySubcategoryIndexRoute: typeof NewsCategorySubcategoryIndexRoute
 }
 
@@ -220,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsCategoryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/news/page/$page': {
+      id: '/news/page/$page'
+      path: '/news/page/$page'
+      fullPath: '/news/page/$page'
+      preLoaderRoute: typeof NewsPagePageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/news/$category/$subcategory/': {
       id: '/news/$category/$subcategory/'
       path: '/news/$category/$subcategory'
@@ -227,11 +246,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NewsCategorySubcategoryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/news/$category/$subcategory/$slug': {
-      id: '/news/$category/$subcategory/$slug'
-      path: '/news/$category/$subcategory/$slug'
-      fullPath: '/news/$category/$subcategory/$slug'
-      preLoaderRoute: typeof NewsCategorySubcategorySlugRouteImport
+    '/news/$year/$month/$slug': {
+      id: '/news/$year/$month/$slug'
+      path: '/news/$year/$month/$slug'
+      fullPath: '/news/$year/$month/$slug'
+      preLoaderRoute: typeof NewsYearMonthSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -245,8 +264,9 @@ const rootRouteChildren: RootRouteChildren = {
   TopicsSlugRoute: TopicsSlugRoute,
   MarketsIndexRoute: MarketsIndexRoute,
   NewsIndexRoute: NewsIndexRoute,
+  NewsPagePageRoute: NewsPagePageRoute,
   NewsCategoryIndexRoute: NewsCategoryIndexRoute,
-  NewsCategorySubcategorySlugRoute: NewsCategorySubcategorySlugRoute,
+  NewsYearMonthSlugRoute: NewsYearMonthSlugRoute,
   NewsCategorySubcategoryIndexRoute: NewsCategorySubcategoryIndexRoute,
 }
 export const routeTree = rootRouteImport
