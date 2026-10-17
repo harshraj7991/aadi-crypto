@@ -51,6 +51,9 @@ jobs:
       - name: Assert no secrets reached the client
         run: node scripts/check-bundle.mjs
 
+      - name: Assert the docs name real commands
+        run: node scripts/check-docs.mjs
+
       - name: Name the worker
         run: node scripts/prepare-deploy.mjs ${{ vars.WORKER_NAME }}
 

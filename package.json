@@ -15,6 +15,7 @@
     "preview:cf": "npm run build && node scripts/prepare-deploy.mjs aadicrypto-dev && cp .env .output/server/.dev.vars && wrangler dev",
     "deploy:dev": "npm run build && node scripts/prepare-deploy.mjs aadicrypto-dev && wrangler deploy",
     "deploy:prod": "npm run build && node scripts/prepare-deploy.mjs harshraj7991-aadi-crypto && wrangler deploy --domain aadicrypto.com",
+    "deploy:check": "npm run build && node scripts/prepare-deploy.mjs aadicrypto-dev && wrangler deploy --dry-run",
     "format": "prettier --write ."
   },
   "overrides": {
@@ -92,6 +93,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "wrangler": "^4.147.0"
   }
 }
