@@ -14,7 +14,7 @@
  * the parser handles the data that exists today.
  */
 
-import { splitArticle, stripTags } from "./wp-content";
+import { splitArticle, stripDisclaimer, stripTags } from "./wp-content";
 
 let failures = 0;
 
@@ -120,6 +120,169 @@ check(
   `<p>Lead.</p>${H}`,
 );
 
+// --- the disclaimer writers paste in themselves ----------------------------
+// The page prints its own disclaimer panel, so a pasted one is a duplicate.
+
+console.log("\nstripDisclaimer\n");
+
+{
+  const DISC =
+    "Disclaimer: Aadi Crypto provides this information for educational and informational purposes " +
+    "only. It does not constitute financial, investment, trading, or other professional advice.";
+
+  check(
+    "a pasted disclaimer is removed",
+    stripDisclaimer(`<p>Body.</p><p>${DISC}</p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "an italic one is removed",
+    stripDisclaimer(`<p>Body.</p><p class="wp-block-paragraph"><em>${DISC}</em></p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "a bolded label is removed",
+    stripDisclaimer(`<p>Body.</p><p><strong>Disclaimer:</strong> ${DISC.slice(12)}</p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "the empty paragraph left behind goes too",
+    stripDisclaimer(`<p>Body.</p><p>${DISC}</p><p class="wp-block-paragraph"></p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "blank paragraphs around it come off as well",
+    stripDisclaimer(`<p>Body.</p><p></p><p>${DISC}</p><p>&nbsp;</p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "it is stripped through splitArticle as well",
+    splitArticle(`<p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p><p>${DISC}</p>`).body,
+    "<p>Body.</p>",
+  );
+
+  // Both wordings in the CMS, which differ only by a stray space.
+  check(
+    "the spaced-colon wording is removed too",
+    stripDisclaimer(`<p>Body.</p><p>${DISC.replace("Disclaimer:", "Disclaimer :")}</p>`),
+    "<p>Body.</p>",
+  );
+
+  // --- what must survive ------------------------------------------------
+  // Opening with "Disclaimer" is not enough. Deleting a real paragraph is a
+  // silent loss of published work, so the predicate has to be specific and
+  // the search has to stay at the foot of the story.
+
+  check(
+    "a story reporting on someone else's notice keeps its paragraph",
+    stripDisclaimer(
+      "<p>Disclaimer: the regulator said its educational investment-advice " +
+        "guidance applies to all firms.</p>",
+    ),
+    "<p>Disclaimer: the regulator said its educational investment-advice " +
+      "guidance applies to all firms.</p>",
+  );
+
+  check(
+    "a story about a disclaimer keeps its paragraph",
+    stripDisclaimer("<p>Disclaimer wording in the filing drew regulator attention.</p>"),
+    "<p>Disclaimer wording in the filing drew regulator attention.</p>",
+  );
+
+  check(
+    "boilerplate mid-story is left alone, duplicate panel and all",
+    stripDisclaimer(`<p>Lead.</p><p>${DISC}</p><p>The story continues.</p>`),
+    `<p>Lead.</p><p>${DISC}</p><p>The story continues.</p>`,
+  );
+
+  check(
+    "only one stock phrase is not enough",
+    stripDisclaimer("<p>Body.</p><p>Disclaimer: for educational purposes only.</p>"),
+    "<p>Body.</p><p>Disclaimer: for educational purposes only.</p>",
+  );
+
+  // Reported speech can quote the stock phrases. Only our own masthead says
+  // the notice is ours rather than one the story is writing about.
+  {
+    const quoting =
+      "<p>Body.</p><p>Disclaimer: the filing says \u201Cdoes not constitute\u201D and " +
+      "\u201Cprofessional advice\u201D are misleading.</p>";
+    check("a paragraph quoting two stock phrases is kept", stripDisclaimer(quoting), quoting);
+
+    const reporting =
+      "<p>Body.</p><p>Disclaimer: the exchange told users the page does not constitute " +
+      "professional advice and that they should do your own research.</p>";
+    check("a story reporting a rival's notice is kept", stripDisclaimer(reporting), reporting);
+  }
+
+  check(
+    "the site spelling of the masthead is matched too",
+    stripDisclaimer(`<p>Body.</p><p>${DISC.replace("Aadi Crypto", "AadiCrypto")}</p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
+    "a paragraph merely mentioning advice is untouched",
+    stripDisclaimer("<p>The firm gave investment advice for educational reasons.</p>"),
+    "<p>The firm gave investment advice for educational reasons.</p>",
+  );
+
+  check("a story with no disclaimer is unchanged", stripDisclaimer("<p>Body.</p>"), "<p>Body.</p>");
+
+  // --- tags that only look like paragraphs -------------------------------
+  // `<p[^>]*>` also matches <pre>, <picture>, <param> and <progress>. With
+  // that looser pattern a <pre> before the notice stopped it being stripped,
+  // and a <picture> before it was deleted along with it.
+
+  check(
+    "a <pre> block before it does not block the strip",
+    stripDisclaimer(`<p>Body.</p><pre>const x = 1;</pre><p>${DISC}</p>`),
+    "<p>Body.</p><pre>const x = 1;</pre>",
+  );
+
+  check(
+    "a <picture> before it is not swallowed",
+    stripDisclaimer(`<p>Body.</p><picture><img src="/chart.png"></picture><p>${DISC}</p>`),
+    '<p>Body.</p><picture><img src="/chart.png"></picture>',
+  );
+
+  check(
+    "a <progress> before it survives too",
+    stripDisclaimer(`<p>Body.</p><progress value="70" max="100"></progress><p>${DISC}</p>`),
+    '<p>Body.</p><progress value="70" max="100"></progress>',
+  );
+
+  check(
+    "a space in the closing tag is still a paragraph",
+    stripDisclaimer(`<p>Body.</p><p>${DISC}</p >`),
+    "<p>Body.</p>",
+  );
+}
+
+// A <picture> ahead of the standfirst must not be read as the standfirst.
+check(
+  "a <picture> in the intro is not mistaken for the standfirst",
+  splitArticle(
+    `<picture><img src="/a.png"></picture><p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p>`,
+  ).subtitle,
+  "Lead.",
+);
+
+contains(
+  "and it stays in the body",
+  splitArticle(
+    `<picture><img src="/a.png"></picture><p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p>`,
+  ).body,
+  '<picture><img src="/a.png"></picture>',
+);
+
+console.log("\ninvariant\n");
+
 // --- no-content-loss invariant -------------------------------------------
 // The property that actually matters: every word in goes somewhere.
 
@@ -129,13 +292,17 @@ check(
     `<p>Lead.</p><figure><img src="/a.png"></figure><p>Extra.</p>${H}<p>• One.</p><p>Gamma.</p>`,
     `<p>Lead.</p>${H}<p>Prose summary.</p><p>Delta.</p>`,
     `<p>No heading here.</p><p>Epsilon.</p>`,
+    `<p>Lead.</p>${H}<ul><li>One.</li></ul><p>Zeta.</p>` +
+      `<p><em>Disclaimer: Aadi Crypto provides this for educational purposes only.</em></p>`,
   ];
   samples.forEach((html, i) => {
     const r = splitArticle(html);
     // The heading text is meant to disappear — the component prints its own
     // "Quick News Summary" title — and so is the bullet character, which the
     // box draws in CSS. Neither is content.
-    const source = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ").replace(/\u2022/g, " ");
+    const source = stripDisclaimer(html)
+      .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ")
+      .replace(/\u2022/g, " ");
     const before = stripTags(source).split(/\s+/).filter(Boolean).sort();
     const after = stripTags(`${r.subtitle} ${r.summary.join(" ")} ${r.body}`)
       .split(/\s+/)
