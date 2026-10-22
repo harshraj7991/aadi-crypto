@@ -213,7 +213,53 @@ console.log("\nstripDisclaimer\n");
   );
 
   check("a story with no disclaimer is unchanged", stripDisclaimer("<p>Body.</p>"), "<p>Body.</p>");
+
+  // --- tags that only look like paragraphs -------------------------------
+  // `<p[^>]*>` also matches <pre>, <picture>, <param> and <progress>. With
+  // that looser pattern a <pre> before the notice stopped it being stripped,
+  // and a <picture> before it was deleted along with it.
+
+  check(
+    "a <pre> block before it does not block the strip",
+    stripDisclaimer(`<p>Body.</p><pre>const x = 1;</pre><p>${DISC}</p>`),
+    "<p>Body.</p><pre>const x = 1;</pre>",
+  );
+
+  check(
+    "a <picture> before it is not swallowed",
+    stripDisclaimer(`<p>Body.</p><picture><img src="/chart.png"></picture><p>${DISC}</p>`),
+    '<p>Body.</p><picture><img src="/chart.png"></picture>',
+  );
+
+  check(
+    "a <progress> before it survives too",
+    stripDisclaimer(`<p>Body.</p><progress value="70" max="100"></progress><p>${DISC}</p>`),
+    '<p>Body.</p><progress value="70" max="100"></progress>',
+  );
+
+  check(
+    "a space in the closing tag is still a paragraph",
+    stripDisclaimer(`<p>Body.</p><p>${DISC}</p >`),
+    "<p>Body.</p>",
+  );
 }
+
+// A <picture> ahead of the standfirst must not be read as the standfirst.
+check(
+  "a <picture> in the intro is not mistaken for the standfirst",
+  splitArticle(
+    `<picture><img src="/a.png"></picture><p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p>`,
+  ).subtitle,
+  "Lead.",
+);
+
+contains(
+  "and it stays in the body",
+  splitArticle(
+    `<picture><img src="/a.png"></picture><p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p>`,
+  ).body,
+  '<picture><img src="/a.png"></picture>',
+);
 
 console.log("\ninvariant\n");
 

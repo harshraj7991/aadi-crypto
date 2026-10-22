@@ -58,7 +58,22 @@ function isBoilerplateDisclaimer(text: string): boolean {
   return DISCLAIMER_PHRASES.filter((re) => re.test(text)).length >= 2;
 }
 
-const BLANK_TAIL = /(?:\s*<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+\s*$/i;
+/**
+ * A real `<p>` tag, and nothing that merely starts with one.
+ *
+ * `<p[^>]*>` reads as "a paragraph with optional attributes" but is not:
+ * `[^>]*` happily eats the rest of a tag name, so it also matches `<pre>`,
+ * `<picture>`, `<param>` and `<progress>`. Insisting on whitespace or the
+ * closing bracket straight after the p keeps it to paragraphs.
+ *
+ * This is not cosmetic. With the loose version, a `<pre>` before the
+ * disclaimer stopped it being stripped, and a `<picture>` before it was
+ * deleted along with it -- the picture vanished from the published story.
+ */
+const PARAGRAPH = String.raw`<p(?:\s[^>]*)?>([\s\S]*?)<\/p\s*>`;
+const BLANK_PARAGRAPH = String.raw`<p(?:\s[^>]*)?>(?:\s|&nbsp;|<br\s*\/?>)*<\/p\s*>`;
+
+const BLANK_TAIL = new RegExp(`(?:\\s*${BLANK_PARAGRAPH})+\\s*$`, "i");
 
 /**
  * Drop the boilerplate disclaimer writers paste at the foot of a story.
@@ -78,7 +93,7 @@ export function stripDisclaimer(html: string): string {
   // they would hide the real last paragraph from the check below.
   const trimmed = html.replace(BLANK_TAIL, "").trimEnd();
 
-  const paragraphs = [...trimmed.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+  const paragraphs = [...trimmed.matchAll(new RegExp(PARAGRAPH, "gi"))];
   const last = paragraphs[paragraphs.length - 1];
   if (!last || last.index === undefined) return trimmed.trim();
 
@@ -125,7 +140,7 @@ export function splitArticle(raw: string): SplitArticle {
   // The standfirst is the first paragraph above the heading. Whatever else is
   // up there belongs to the reader, so it is carried into the body rather than
   // thrown away.
-  const firstPara = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(before);
+  const firstPara = new RegExp(PARAGRAPH, "i").exec(before);
   const subtitle = firstPara?.[1] ? stripTags(firstPara[1]) : "";
   const intro = firstPara
     ? before.slice(0, firstPara.index) + before.slice(firstPara.index + firstPara[0].length)
@@ -147,7 +162,7 @@ export function splitArticle(raw: string): SplitArticle {
   }
 
   if (summary.length === 0) {
-    const paragraph = /^\s*<p[^>]*>([\s\S]*?)<\/p>/i;
+    const paragraph = new RegExp(`^\\s*${PARAGRAPH}`, "i");
 
     // Shape two: paragraphs that each begin with a bullet character.
     for (;;) {
