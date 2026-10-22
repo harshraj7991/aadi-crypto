@@ -544,13 +544,17 @@
     </div>
 
     <div class="col">
-      <p>Two commands do everything:</p>
+      <p>Shipping normally happens on GitHub: <strong>Actions &rarr; Deploy &rarr; Run workflow</strong>, choosing <code>dev</code> or <code>prod</code>. Merging runs the checks but never deploys &mdash; that stays a decision someone makes. The same job runs typecheck, tests, the build and a scan for leaked credentials before it ships anything, then smoke-tests the result.</p>
+      <p>The same steps run locally when you need them:</p>
     </div>
 
-    <pre><b>npm run preview:cf</b>   <i># build, then run the real Worker locally</i>
-<b>npm run deploy</b>       <i># build, then wrangler deploy</i>
+    <pre><b>npm run preview:cf</b>    <i># build, then run the real Worker locally</i>
+<b>npm run deploy:check</b>  <i># build and validate a deploy without shipping</i>
+<b>npm run deploy:dev</b>    <i># ship to the dev worker</i>
+<b>npm run deploy:prod</b>   <i># ship to aadicrypto.com</i>
 
-<i># the API key, stored encrypted at Cloudflare, never in the repo</i>
+<i># the API key, stored encrypted at Cloudflare, never in the repo.</i>
+<i># once per worker — dev and prod each need their own.</i>
 <b>npx wrangler secret put COINGECKO_API_KEY</b></pre>
 
     <div class="col" style="margin-top:22px">

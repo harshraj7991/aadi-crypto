@@ -93,7 +93,8 @@ export function labelLink(label: string): SiteLinkTarget {
 
   if (findTopic(slug)) return { to: "/topics/$slug", params: { slug } };
   if (coinHubs.some((c) => c.slug === slug)) return { to: "/coins/$slug", params: { slug } };
-  if (contentFormats.some((f) => f.slug === slug)) return { to: "/formats/$slug", params: { slug } };
+  if (contentFormats.some((f) => f.slug === slug))
+    return { to: "/formats/$slug", params: { slug } };
 
   const category = categories.find((c) => c.slug === slug);
   if (category) return { to: "/news/$category", params: { category: category.slug } };

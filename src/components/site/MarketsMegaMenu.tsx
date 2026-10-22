@@ -56,25 +56,27 @@ export function MarketsMegaMenu() {
 export function MarketsMobileList() {
   return (
     <div className="space-y-3">
-      {marketsMenu.flatMap((c) => c.sections).map((section) => (
-        <details key={section.heading} className="rounded-sm border border-border">
-          <summary className="cursor-pointer px-3 py-2 text-[13px] font-semibold text-ink">
-            {section.heading}
-          </summary>
-          <ul className="px-3 pb-2">
-            {section.items.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path as never}
-                  className="block py-1.5 text-[13px] text-muted-foreground"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </details>
-      ))}
+      {marketsMenu
+        .flatMap((c) => c.sections)
+        .map((section) => (
+          <details key={section.heading} className="rounded-sm border border-border">
+            <summary className="cursor-pointer px-3 py-2 text-[13px] font-semibold text-ink">
+              {section.heading}
+            </summary>
+            <ul className="px-3 pb-2">
+              {section.items.map((item) => (
+                <li key={item.path}>
+                  <Link
+                    to={item.path as never}
+                    className="block py-1.5 text-[13px] text-muted-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
     </div>
   );
 }

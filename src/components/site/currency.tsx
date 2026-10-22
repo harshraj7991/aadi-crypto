@@ -8,7 +8,9 @@ const CurrencyContext = createContext<Ctx>({ currency: "USD", setCurrency: () =>
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrency] = useState<Currency>("USD");
   return (
-    <CurrencyContext.Provider value={{ currency, setCurrency }}>{children}</CurrencyContext.Provider>
+    <CurrencyContext.Provider value={{ currency, setCurrency }}>
+      {children}
+    </CurrencyContext.Provider>
   );
 }
 

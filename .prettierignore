@@ -6,3 +6,10 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+
+# Prose and hand-written documents. The formatter rewrites markdown headings
+# and reflows HTML, which is pure churn on files nobody asked it to touch —
+# and it would fight whoever edits them next.
+*.md
+public/*.html
+.lovable

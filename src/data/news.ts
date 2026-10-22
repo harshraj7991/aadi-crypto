@@ -36,7 +36,8 @@ export const secondaryStories: Story[] = [
     id: "sec-1",
     category: "Ethereum",
     headline: "Staked ETH hits a record share of supply as validators queue grows again",
-    summary: "Exit queues stay short, but liquid restaking is quietly reshaping validator economics.",
+    summary:
+      "Exit queues stay short, but liquid restaking is quietly reshaping validator economics.",
     author: "Dev Malhotra",
     time: "38 min ago",
     image: ethereumImg,
@@ -128,7 +129,8 @@ export const newsroom: NewsroomSection[] = [
       id: "b-f",
       category: "Bitcoin",
       headline: "Halving math starts to bite: miners lean on treasury sales and hosting deals",
-      summary: "Post-subsidy economics are separating low-cost operators from the rest of the field.",
+      summary:
+        "Post-subsidy economics are separating low-cost operators from the rest of the field.",
       author: "Kabir Shah",
       time: "1 hr ago",
       image: bitcoinImg,
