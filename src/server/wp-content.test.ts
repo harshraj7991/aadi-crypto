@@ -206,6 +206,26 @@ console.log("\nstripDisclaimer\n");
     "<p>Body.</p><p>Disclaimer: for educational purposes only.</p>",
   );
 
+  // Reported speech can quote the stock phrases. Only our own masthead says
+  // the notice is ours rather than one the story is writing about.
+  {
+    const quoting =
+      "<p>Body.</p><p>Disclaimer: the filing says \u201Cdoes not constitute\u201D and " +
+      "\u201Cprofessional advice\u201D are misleading.</p>";
+    check("a paragraph quoting two stock phrases is kept", stripDisclaimer(quoting), quoting);
+
+    const reporting =
+      "<p>Body.</p><p>Disclaimer: the exchange told users the page does not constitute " +
+      "professional advice and that they should do your own research.</p>";
+    check("a story reporting a rival's notice is kept", stripDisclaimer(reporting), reporting);
+  }
+
+  check(
+    "the site spelling of the masthead is matched too",
+    stripDisclaimer(`<p>Body.</p><p>${DISC.replace("Aadi Crypto", "AadiCrypto")}</p>`),
+    "<p>Body.</p>",
+  );
+
   check(
     "a paragraph merely mentioning advice is untouched",
     stripDisclaimer("<p>The firm gave investment advice for educational reasons.</p>"),

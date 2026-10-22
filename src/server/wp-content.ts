@@ -32,11 +32,24 @@ export function decodeTitle(html: string): string {
 export type SplitArticle = { subtitle: string; summary: string[]; body: string };
 
 /**
+ * The masthead introducing our own notice.
+ *
+ * This is the part reported speech cannot have. A story quoting someone
+ * else's disclaimer can repeat any number of the stock phrases below -- "the
+ * filing says 'does not constitute' and 'professional advice' are misleading"
+ * repeats two of them -- but it will not introduce the notice as ours.
+ *
+ * Spelled loosely because the CMS writes "Aadi Crypto" and the site writes
+ * "AadiCrypto".
+ */
+const DISCLAIMER_ANCHOR = /\bAadi\s*Crypto\s+provides\s+this\s+information\b/i;
+
+/**
  * The stock phrases the pasted notice is built from.
  *
- * Every copy found in the CMS is the same block of boilerplate, down to two
- * wordings that differ only by a stray space before the colon, so the test can
- * afford to be specific.
+ * Every copy in the CMS is the same block of boilerplate, down to two wordings
+ * that differ only by a stray space before the colon, so the test can afford
+ * to be specific.
  */
 const DISCLAIMER_PHRASES = [
   /\bpurposes only\b/i,
@@ -46,15 +59,20 @@ const DISCLAIMER_PHRASES = [
 ];
 
 /**
- * Is this the notice itself, rather than a paragraph that mentions one?
+ * Is this our notice itself, rather than a paragraph reporting on one?
  *
- * Opening with "Disclaimer" is not enough on its own. A story may report on
- * someone else's notice -- "Disclaimer: the regulator said its educational
- * investment-advice guidance applies to all firms" opens exactly that way --
- * so at least two of the stock phrases have to be there as well.
+ * All three conditions are needed. Opening with "Disclaimer" is how the paste
+ * always starts but says nothing on its own; the stock phrases say it reads
+ * like the notice; and the masthead says the notice is ours rather than one
+ * the story is quoting.
+ *
+ * Erring strict is deliberate. A copy that slips through shows the panel
+ * twice, which is untidy but plain to see. A paragraph wrongly matched is
+ * published work deleted with nothing on screen to show for it.
  */
 function isBoilerplateDisclaimer(text: string): boolean {
   if (!/^disclaimer\b/i.test(text)) return false;
+  if (!DISCLAIMER_ANCHOR.test(text)) return false;
   return DISCLAIMER_PHRASES.filter((re) => re.test(text)).length >= 2;
 }
 
