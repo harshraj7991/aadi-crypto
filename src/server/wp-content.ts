@@ -32,6 +32,32 @@ export function decodeTitle(html: string): string {
 export type SplitArticle = { subtitle: string; summary: string[]; body: string };
 
 /**
+ * Drop the boilerplate disclaimer writers paste at the foot of a story.
+ *
+ * The article page prints its own disclaimer panel on every story, because
+ * financial content needs one whether or not the writer remembered. When a
+ * writer pastes one in as well the reader gets it twice: once as plain body
+ * text, once in the styled box.
+ *
+ * Only the boilerplate goes. A paragraph has to both open with "Disclaimer"
+ * and read like the standard notice, so a story that genuinely reports on
+ * someone else's disclaimer keeps its paragraph.
+ */
+export function stripDisclaimer(html: string): string {
+  return (
+    html
+      .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (match, inner: string) => {
+        const text = stripTags(inner);
+        if (!/^disclaimer\b/i.test(text)) return match;
+        return /\b(advice|educational|informational)\b/i.test(text) ? "" : match;
+      })
+      // Writers tend to leave a blank paragraph behind where it sat.
+      .replace(/<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "")
+      .trim()
+  );
+}
+
+/**
  * Recover the editors' structure from WordPress's flat HTML.
  *
  * Every story is meant to be: a standfirst, a "Quick News Summary" heading,
@@ -49,7 +75,11 @@ export type SplitArticle = { subtitle: string; summary: string[]; body: string }
  * standfirst — a second paragraph, an image, an embed — is put back at the
  * top of the body, and anything unrecognised below it stays in the body too.
  */
-export function splitArticle(html: string): SplitArticle {
+export function splitArticle(raw: string): SplitArticle {
+  // The writers' own disclaimer comes off before anything is measured, so it
+  // cannot end up in the summary box or the body.
+  const html = stripDisclaimer(raw);
+
   const heading = html.match(
     /<h[1-6][^>]*>\s*(?:<strong>)?\s*Quick\s+News\s+Summary:?\s*(?:<\/strong>)?\s*<\/h[1-6]>/i,
   );

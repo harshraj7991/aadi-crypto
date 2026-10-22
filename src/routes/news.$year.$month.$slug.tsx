@@ -151,7 +151,7 @@ function ArticlePage() {
 
         {a.summary.length > 0 && (
           <section aria-labelledby="quick-summary" className="summary-box mt-7">
-            <h2 id="quick-summary">Quick News Summary</h2>
+            <h2 id="quick-summary">Quick News Summary:</h2>
             {/* One item means the writer summarised in prose, so a lone
                 bullet would look like a mistake. */}
             {a.summary.length === 1 ? (
@@ -185,13 +185,15 @@ function ArticlePage() {
           </ul>
         )}
 
-        {/* Financial content, so this is not optional furniture. */}
+        {/* Financial content, so this is not optional furniture. It prints on
+            every story; any copy the writer pasted into the body is stripped by
+            stripDisclaimer so the reader never sees it twice. */}
         <aside className="disclaimer-box mt-8">
           <p>
-            <strong>Disclaimer:</strong> AadiCrypto provides this information for educational and
-            informational purposes only. It does not constitute financial, investment, trading or
-            other professional advice. Always do your own research and consider your own
-            circumstances before making any financial decision.
+            Disclaimer: AadiCrypto provides this information for educational and informational
+            purposes only. It does not constitute financial, investment, trading or other
+            professional advice. Always do your own research and consider your own circumstances
+            before making any financial decision.
           </p>
         </aside>
 
