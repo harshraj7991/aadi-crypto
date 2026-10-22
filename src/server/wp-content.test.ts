@@ -155,16 +155,55 @@ console.log("\nstripDisclaimer\n");
   );
 
   check(
+    "blank paragraphs around it come off as well",
+    stripDisclaimer(`<p>Body.</p><p></p><p>${DISC}</p><p>&nbsp;</p>`),
+    "<p>Body.</p>",
+  );
+
+  check(
     "it is stripped through splitArticle as well",
     splitArticle(`<p>Lead.</p>${H}<ul><li>One.</li></ul><p>Body.</p><p>${DISC}</p>`).body,
     "<p>Body.</p>",
   );
 
-  // The narrow signal matters: a story may report on someone else's notice.
+  // Both wordings in the CMS, which differ only by a stray space.
+  check(
+    "the spaced-colon wording is removed too",
+    stripDisclaimer(`<p>Body.</p><p>${DISC.replace("Disclaimer:", "Disclaimer :")}</p>`),
+    "<p>Body.</p>",
+  );
+
+  // --- what must survive ------------------------------------------------
+  // Opening with "Disclaimer" is not enough. Deleting a real paragraph is a
+  // silent loss of published work, so the predicate has to be specific and
+  // the search has to stay at the foot of the story.
+
+  check(
+    "a story reporting on someone else's notice keeps its paragraph",
+    stripDisclaimer(
+      "<p>Disclaimer: the regulator said its educational investment-advice " +
+        "guidance applies to all firms.</p>",
+    ),
+    "<p>Disclaimer: the regulator said its educational investment-advice " +
+      "guidance applies to all firms.</p>",
+  );
+
   check(
     "a story about a disclaimer keeps its paragraph",
     stripDisclaimer("<p>Disclaimer wording in the filing drew regulator attention.</p>"),
     "<p>Disclaimer wording in the filing drew regulator attention.</p>",
+  );
+
+  check(
+    "boilerplate mid-story is left alone, duplicate panel and all",
+    stripDisclaimer(`<p>Lead.</p><p>${DISC}</p><p>The story continues.</p>`),
+    `<p>Lead.</p><p>${DISC}</p><p>The story continues.</p>`,
+  );
+
+  check(
+    "only one stock phrase is not enough",
+    stripDisclaimer("<p>Body.</p><p>Disclaimer: for educational purposes only.</p>"),
+    "<p>Body.</p><p>Disclaimer: for educational purposes only.</p>",
   );
 
   check(

@@ -32,6 +32,35 @@ export function decodeTitle(html: string): string {
 export type SplitArticle = { subtitle: string; summary: string[]; body: string };
 
 /**
+ * The stock phrases the pasted notice is built from.
+ *
+ * Every copy found in the CMS is the same block of boilerplate, down to two
+ * wordings that differ only by a stray space before the colon, so the test can
+ * afford to be specific.
+ */
+const DISCLAIMER_PHRASES = [
+  /\bpurposes only\b/i,
+  /\bdoes not constitute\b/i,
+  /\bprofessional advice\b/i,
+  /\bdo your own research\b/i,
+];
+
+/**
+ * Is this the notice itself, rather than a paragraph that mentions one?
+ *
+ * Opening with "Disclaimer" is not enough on its own. A story may report on
+ * someone else's notice -- "Disclaimer: the regulator said its educational
+ * investment-advice guidance applies to all firms" opens exactly that way --
+ * so at least two of the stock phrases have to be there as well.
+ */
+function isBoilerplateDisclaimer(text: string): boolean {
+  if (!/^disclaimer\b/i.test(text)) return false;
+  return DISCLAIMER_PHRASES.filter((re) => re.test(text)).length >= 2;
+}
+
+const BLANK_TAIL = /(?:\s*<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+\s*$/i;
+
+/**
  * Drop the boilerplate disclaimer writers paste at the foot of a story.
  *
  * The article page prints its own disclaimer panel on every story, because
@@ -39,22 +68,25 @@ export type SplitArticle = { subtitle: string; summary: string[]; body: string }
  * writer pastes one in as well the reader gets it twice: once as plain body
  * text, once in the styled box.
  *
- * Only the boilerplate goes. A paragraph has to both open with "Disclaimer"
- * and read like the standard notice, so a story that genuinely reports on
- * someone else's disclaimer keeps its paragraph.
+ * Only the final paragraph is ever considered. Every pasted copy in the CMS
+ * sits at the very foot of the story, and the asymmetry matters: showing the
+ * panel twice is untidy but visible, whereas deleting a paragraph from the
+ * middle of a piece loses published work and nobody notices.
  */
 export function stripDisclaimer(html: string): string {
-  return (
-    html
-      .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (match, inner: string) => {
-        const text = stripTags(inner);
-        if (!/^disclaimer\b/i.test(text)) return match;
-        return /\b(advice|educational|informational)\b/i.test(text) ? "" : match;
-      })
-      // Writers tend to leave a blank paragraph behind where it sat.
-      .replace(/<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "")
-      .trim()
-  );
+  // WordPress leaves blank paragraphs at the foot. They come off first, or
+  // they would hide the real last paragraph from the check below.
+  const trimmed = html.replace(BLANK_TAIL, "").trimEnd();
+
+  const paragraphs = [...trimmed.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+  const last = paragraphs[paragraphs.length - 1];
+  if (!last || last.index === undefined) return trimmed.trim();
+
+  // Footer only.
+  if (last.index + last[0].length !== trimmed.length) return trimmed.trim();
+  if (!isBoilerplateDisclaimer(stripTags(last[1] ?? ""))) return trimmed.trim();
+
+  return trimmed.slice(0, last.index).replace(BLANK_TAIL, "").trim();
 }
 
 /**
