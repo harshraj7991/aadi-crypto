@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Bell, Briefcase, Menu, Search, Star, X } from "lucide-react";
-import logo from "@/assets/aadicrypto-logo.png";
+import logo from "@/assets/aadicrypto-mark.svg";
 import { labelLink, SiteLink, storyLink } from "./links";
 import type { Currency } from "@/data/market";
 import { headlineSymbols } from "@/data/market";
@@ -130,8 +130,9 @@ export function SiteHeader() {
         <div className="container-page flex h-16 items-center gap-6">
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <img src={logo} alt="AadiCrypto" width={36} height={36} className="h-9 w-9" />
-            <span className="text-[19px] font-extrabold tracking-tight text-ink">
-              Aadi<span className="text-primary">Crypto</span>
+            <span className="text-[19px] tracking-tight text-ink">
+              <span className="font-extrabold">Aadi</span>{" "}
+              <span className="font-medium">Crypto</span>
             </span>
           </Link>
 

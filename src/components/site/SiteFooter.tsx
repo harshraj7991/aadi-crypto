@@ -1,4 +1,4 @@
-import logo from "@/assets/aadicrypto-logo.png";
+import logo from "@/assets/aadicrypto-mark-light.svg";
 import { labelLink, SiteLink } from "./links";
 
 const columns: Array<{ title: string; links: string[] }> = [
@@ -43,8 +43,9 @@ export function SiteFooter() {
                 height={32}
                 className="h-8 w-8"
               />
-              <span className="text-[17px] font-extrabold">
-                Aadi<span className="text-[oklch(0.82_0.14_132)]">Crypto</span>
+              <span className="text-[17px]">
+                <span className="font-extrabold">Aadi</span>{" "}
+                <span className="font-medium">Crypto</span>
               </span>
             </div>
             <p className="mt-3 max-w-[38ch] text-[13.5px] leading-relaxed text-background/70">
