@@ -22,6 +22,11 @@ export type ArticleImage = {
   alt: string;
   width: number;
   height: number;
+  /**
+   * A smaller copy for link previews (og:image). WhatsApp drops preview images
+   * over roughly 300 KB, and the full-size uploads are PNGs well past that.
+   */
+  share: { url: string; width: number; height: number };
 };
 
 export type ArticleSummary = {
