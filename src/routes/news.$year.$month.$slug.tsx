@@ -34,7 +34,10 @@ export const Route = createFileRoute("/news/$year/$month/$slug")({
     }
     const a = loaderData;
     const image = a.image ? `${SITE}${a.image.url}` : undefined;
-    const share = a.image?.share;
+    // Articles cached at the edge by an older deploy have no `share` copy and
+    // can be served for a while after a release. Use the main image for those,
+    // as before, rather than dropping the preview image altogether.
+    const share = a.image ? (a.image.share ?? a.image) : undefined;
     const description = a.subtitle || a.excerpt;
 
     return {
