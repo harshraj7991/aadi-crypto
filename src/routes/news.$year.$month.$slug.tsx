@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-route
 
 import { fetchArticle } from "@/lib/news-fn";
 import { Byline, timeAgo } from "@/components/site/ArticleCards";
+import { ShareButton } from "@/components/site/ShareButton";
 
 const SITE = "https://aadicrypto.com";
 
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/news/$year/$month/$slug")({
     }
     const a = loaderData;
     const image = a.image ? `${SITE}${a.image.url}` : undefined;
+    const share = a.image?.share;
     const description = a.subtitle || a.excerpt;
 
     return {
@@ -42,10 +44,20 @@ export const Route = createFileRoute("/news/$year/$month/$slug")({
         { property: "og:title", content: a.title },
         { property: "og:description", content: description },
         { property: "og:type", content: "article" },
+        { property: "og:url", content: `${SITE}${a.url}` },
+        { property: "og:site_name", content: "AadiCrypto" },
         { property: "article:published_time", content: a.publishedAt },
         { property: "article:modified_time", content: a.updatedAt },
         { name: "twitter:card", content: "summary_large_image" },
-        ...(image ? [{ property: "og:image", content: image }] : []),
+        // The light copy, so the preview shows in WhatsApp too (see ArticleImage).
+        ...(share && a.image
+          ? [
+              { property: "og:image", content: `${SITE}${share.url}` },
+              { property: "og:image:width", content: String(share.width) },
+              { property: "og:image:height", content: String(share.height) },
+              { property: "og:image:alt", content: a.image.alt },
+            ]
+          : []),
         // Crypto is a "Your Money or Your Life" subject. A story with no named
         // author is held out of search rather than published anonymously.
         ...(a.author ? [] : [{ name: "robots", content: "noindex, follow" }]),
@@ -135,6 +147,12 @@ function ArticlePage() {
           <time dateTime={a.publishedAt} className="text-[13px] text-muted-foreground">
             {timeAgo(a.publishedAt)}
           </time>
+          <ShareButton
+            url={`${SITE}${a.url}`}
+            title={a.title}
+            text={a.subtitle || a.excerpt}
+            className="ml-auto"
+          />
         </div>
 
         {a.image && (

@@ -146,10 +146,43 @@ type WpPost = {
     "wp:featuredmedia"?: Array<{
       source_url?: string;
       alt_text?: string;
-      media_details?: { width?: number; height?: number };
+      media_details?: {
+        width?: number;
+        height?: number;
+        filesize?: number;
+        sizes?: Record<string, WpImageSize>;
+      };
     }>;
   };
 };
+
+type WpImageSize = { source_url?: string; width?: number; height?: number; filesize?: number };
+
+/** WhatsApp skips preview images above roughly this; other apps allow far more. */
+const SHARE_IMAGE_MAX_BYTES = 300_000;
+
+/**
+ * The widest copy WordPress made that is still light enough for every chat
+ * app's link preview. WordPress records each copy's file size, so nothing is
+ * downloaded to decide. Copies with no recorded size are skipped; if none
+ * qualify, the main image is used and the preview is no worse than before.
+ */
+function pickShareImage(
+  sizes: Record<string, WpImageSize> | undefined,
+  fallback: { url: string; width: number; height: number },
+): { url: string; width: number; height: number } {
+  let best: { url: string; width: number; height: number } | null = null;
+  for (const size of Object.values(sizes ?? {})) {
+    if (!size.source_url || !size.width || !size.height || !size.filesize) continue;
+    if (size.filesize > SHARE_IMAGE_MAX_BYTES) continue;
+    // Square crops (the 150px thumbnail) make a poor preview card.
+    if (size.width === size.height) continue;
+    const url = proxyImageUrl(size.source_url);
+    if (!url) continue;
+    if (!best || size.width > best.width) best = { url, width: size.width, height: size.height };
+  }
+  return best ?? fallback;
+}
 
 /**
  * Images move onto our own domain so Cloudflare caches them. `cms` is DNS-only
@@ -177,6 +210,8 @@ function toSummary(
 
   const media = post._embedded?.["wp:featuredmedia"]?.[0];
   const proxied = media?.source_url ? proxyImageUrl(media.source_url) : null;
+  const width = media?.media_details?.width ?? 1200;
+  const height = media?.media_details?.height ?? 675;
 
   const wpAuthor = post._embedded?.author?.[0];
   const bio = (wpAuthor?.description ?? "").trim();
@@ -226,8 +261,9 @@ function toSummary(
       ? {
           url: proxied,
           alt: media?.alt_text || decodeTitle(post.title?.rendered ?? ""),
-          width: media?.media_details?.width ?? 1200,
-          height: media?.media_details?.height ?? 675,
+          width,
+          height,
+          share: pickShareImage(media?.media_details?.sizes, { url: proxied, width, height }),
         }
       : null,
     readingMinutes: Math.max(1, Math.round(words / 220)),
