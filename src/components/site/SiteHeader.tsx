@@ -1,17 +1,17 @@
-import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Bell, Briefcase, Menu, Search, Star, X } from "lucide-react";
 import logo from "@/assets/aadicrypto-mark.svg";
-import { labelLink, SiteLink, storyLink } from "./links";
 import type { Currency } from "@/data/market";
 import { headlineSymbols } from "@/data/market";
-import type { MarketTicker } from "@/types/market";
-import { formatCompact, formatPrice } from "@/lib/format";
-import { CurrencyToggle, useCurrency } from "./currency";
-import { useMarketTicker } from "./useMarketTicker";
-import { Delta } from "./Delta";
-import { MarketsMegaMenu, MarketsMobileList } from "./MarketsMegaMenu";
 import { headerFeatures, isNavItemVisible } from "@/data/site-features";
+import { formatCompact, formatPrice } from "@/lib/format";
+import type { MarketTicker } from "@/types/market";
+import { Link } from "@tanstack/react-router";
+import { Bell, Briefcase, Menu, Search, Star, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CurrencyToggle, useCurrency } from "./currency";
+import { Delta } from "./Delta";
+import { labelLink, SiteLink } from "./links";
+import { MarketsMegaMenu, MarketsMobileList } from "./MarketsMegaMenu";
+import { useMarketTicker } from "./useMarketTicker";
 
 const primaryNav = [
   "Home",
@@ -256,27 +256,83 @@ function IconButton({ label, children }: { label: string; children: React.ReactN
   );
 }
 
+/** How long the ticker waits after a hover or tap before moving again. */
+const TICKER_RESUME_MS = 500;
+/** Seconds per coin on screen, so the speed stays the same as the list grows. */
+const TICKER_SECONDS_PER_COIN = 4;
+/**
+ * Coins in one half of the loop. Seven coins are narrower than a wide
+ * monitor, which slid an empty gap into view, so the set repeats until a half
+ * is wider than any screen (about 150px a coin).
+ */
+const TICKER_MIN_ITEMS = 24;
+
 function Ticker() {
   const { currency } = useCurrency();
   const { coins } = useMarketTicker();
+  const [paused, setPaused] = useState(false);
+  const resumeTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(resumeTimer.current), []);
+
   // Keep the editorial order from headlineSymbols, drop anything not in the
   // top hundred rather than leaving a hole in the strip.
   const bySymbol = new Map(coins.map((coin) => [coin.symbol, coin]));
   const headline = headlineSymbols
     .map((symbol) => bySymbol.get(symbol))
     .filter((coin): coin is NonNullable<typeof coin> => coin !== undefined);
+
+  const pause = () => {
+    window.clearTimeout(resumeTimer.current);
+    setPaused(true);
+  };
+  const resumeSoon = () => {
+    window.clearTimeout(resumeTimer.current);
+    resumeTimer.current = window.setTimeout(() => setPaused(false), TICKER_RESUME_MS);
+  };
+
+  // The track is the set of coins repeated an even number of times, so sliding
+  // by half lands on an identical frame. Only the first set is announced;
+  // the rest are visual filler, so screen readers meet each price once.
+  const repeats = headline.length > 0 ? Math.ceil(TICKER_MIN_ITEMS / headline.length) * 2 : 0;
+  const copy = (index: number) => (
+    <ul
+      key={index}
+      aria-hidden={index > 0 || undefined}
+      className="flex shrink-0 items-center gap-6 whitespace-nowrap py-2 pr-6"
+    >
+      {headline.map((c) => (
+        <li key={c.symbol} className="flex shrink-0 items-center gap-2 text-[13px]">
+          <span className="font-bold text-ink">{c.symbol}</span>
+          <span className="tabular text-ink">{formatPrice(c.price, currency)}</span>
+          <Delta value={c.h24} className="text-xs" />
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <div className="border-b border-border bg-surface-cool">
-      <div className="container-page scroll-x">
-        <ul className="flex items-center gap-6 whitespace-nowrap py-2">
-          {headline.map((c) => (
-            <li key={c.symbol} className="flex shrink-0 items-center gap-2 text-[13px]">
-              <span className="font-bold text-ink">{c.symbol}</span>
-              <span className="tabular text-ink">{formatPrice(c.price, currency)}</span>
-              <Delta value={c.h24} className="text-xs" />
-            </li>
-          ))}
-        </ul>
+      <div
+        className="ticker-viewport overflow-hidden"
+        onPointerEnter={pause}
+        onPointerDown={pause}
+        onPointerLeave={resumeSoon}
+        onPointerCancel={resumeSoon}
+        onFocus={pause}
+        onBlur={resumeSoon}
+      >
+        <div
+          className="ticker-track"
+          data-paused={paused}
+          style={
+            {
+              "--ticker-duration": `${(repeats / 2) * headline.length * TICKER_SECONDS_PER_COIN}s`,
+            } as React.CSSProperties
+          }
+        >
+          {Array.from({ length: repeats }, (_, i) => copy(i))}
+        </div>
       </div>
     </div>
   );
