@@ -190,6 +190,10 @@
 }
 
 @utility scroll-x {
+  /* Positioned so absolutely placed children (sr-only labels in a wide table)
+     are clipped by the scroller. Without it they escape to the page and widen
+     it, which scrolled the whole home page sideways on phones. */
+  position: relative;
   overflow-x: auto;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
@@ -201,6 +205,41 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Price ticker under the utility strip. The coin set repeats an even number
+   of times and the track slides left by exactly half, so the loop has no
+   visible seam. Each set carries trailing padding equal to the gap between
+   items, which is what makes -50% land precisely on a set boundary. Pausing is
+   driven from React (data-paused) so it can wait a few seconds before moving
+   again. */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll var(--ticker-duration, 40s) linear infinite;
+}
+.ticker-track[data-paused="true"] {
+  animation-play-state: paused;
+}
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* No motion wanted: a still strip the reader can swipe, without the repeats. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-viewport {
+    overflow-x: auto;
+  }
+  .ticker-track {
+    animation: none;
+  }
+  .ticker-track > [aria-hidden="true"] {
+    display: none;
   }
 }
 
