@@ -19,3 +19,12 @@
 - Add search with the blueprint's faceted filters (category, coin, region, format, sentiment, date).
 - Real backend: articles, categories, accounts, watchlists, saved stories, admin/CMS with editorial roles.
 - Live market data provider instead of placeholder prices.
+
+## Hidden for now
+These are built but hidden from visitors until their content is ready. To bring one back, flip its switch or remove its name from the list in `src/data/site-features.ts`. No other code change is needed.
+- Header nav links: Bitcoin, Ethereum, DeFi, ETFs, Research, Learn, Tools (`hiddenNavItems`).
+- Markets mega-menu, and the Markets list in the mobile menu (`headerFeatures.markets`).
+- Header buttons: Search, Watchlist, Portfolio, Notifications, Sign in (`headerFeatures.search`, `watchlist`, `portfolio`, `notifications`, `signIn`).
+- Footer links: everything except Latest, Altcoins, Regulation, Prices, Movers and Exchanges (`hiddenFooterLinks`, with the reason for each). A column with no links left is hidden, so Research, Tools, Learn and Company don't show at all.
+- Footer legal row: Editorial Policy, Corrections Policy, AI Policy, Privacy, Terms, Risk Disclaimer (also in `hiddenFooterLinks`). None of these pages exist yet; Privacy, Terms and Risk Disclaimer should come first.
+- The pages behind these links still exist and open if someone types the URL. Only the links are hidden.

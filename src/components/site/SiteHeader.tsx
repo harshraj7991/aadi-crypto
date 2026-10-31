@@ -11,6 +11,7 @@ import { CurrencyToggle, useCurrency } from "./currency";
 import { useMarketTicker } from "./useMarketTicker";
 import { Delta } from "./Delta";
 import { MarketsMegaMenu, MarketsMobileList } from "./MarketsMegaMenu";
+import { headerFeatures, isNavItemVisible } from "@/data/site-features";
 
 const primaryNav = [
   "Home",
@@ -138,7 +139,7 @@ export function SiteHeader() {
 
           <nav aria-label="Primary" className="hidden flex-1 xl:block">
             <ul className="flex items-center gap-4 text-[13.5px] font-semibold">
-              {primaryNav.map((item) => (
+              {primaryNav.filter(isNavItemVisible).map((item) => (
                 <li key={item}>
                   <SiteLink
                     target={labelLink(item)}
@@ -148,7 +149,7 @@ export function SiteHeader() {
                   </SiteLink>
                 </li>
               ))}
-              <MarketsMegaMenu />
+              {headerFeatures.markets && <MarketsMegaMenu />}
               <li className="relative group">
                 <button className="border-b-2 border-transparent py-1 text-muted-foreground transition-colors group-hover:border-primary group-hover:text-primary-hover">
                   More
@@ -169,27 +170,37 @@ export function SiteHeader() {
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
-            <IconButton label="Search">
-              <Search className="h-4.5 w-4.5" strokeWidth={1.9} />
-            </IconButton>
-            <IconButton label="Watchlist">
-              <Star className="h-4.5 w-4.5" strokeWidth={1.9} />
-            </IconButton>
-            <IconButton label="Portfolio">
-              <Briefcase className="h-4.5 w-4.5" strokeWidth={1.9} />
-            </IconButton>
-            <IconButton label="Notifications">
-              <span className="relative">
-                <Bell className="h-4.5 w-4.5" strokeWidth={1.9} />
-                <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
-              </span>
-            </IconButton>
-            <button
-              type="button"
-              className="ml-2 hidden rounded-sm bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
-            >
-              Sign in
-            </button>
+            {headerFeatures.search && (
+              <IconButton label="Search">
+                <Search className="h-4.5 w-4.5" strokeWidth={1.9} />
+              </IconButton>
+            )}
+            {headerFeatures.watchlist && (
+              <IconButton label="Watchlist">
+                <Star className="h-4.5 w-4.5" strokeWidth={1.9} />
+              </IconButton>
+            )}
+            {headerFeatures.portfolio && (
+              <IconButton label="Portfolio">
+                <Briefcase className="h-4.5 w-4.5" strokeWidth={1.9} />
+              </IconButton>
+            )}
+            {headerFeatures.notifications && (
+              <IconButton label="Notifications">
+                <span className="relative">
+                  <Bell className="h-4.5 w-4.5" strokeWidth={1.9} />
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                </span>
+              </IconButton>
+            )}
+            {headerFeatures.signIn && (
+              <button
+                type="button"
+                className="ml-2 hidden rounded-sm bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover sm:inline-flex"
+              >
+                Sign in
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
@@ -205,7 +216,7 @@ export function SiteHeader() {
         {menuOpen && (
           <nav aria-label="Mobile" className="border-t border-border bg-background xl:hidden">
             <ul className="container-page grid grid-cols-2 gap-x-4 py-3 sm:grid-cols-3">
-              {[...primaryNav, ...moreNav].map((item) => (
+              {[...primaryNav, ...moreNav].filter(isNavItemVisible).map((item) => (
                 <li key={item}>
                   <SiteLink
                     target={labelLink(item)}
@@ -216,10 +227,12 @@ export function SiteHeader() {
                 </li>
               ))}
             </ul>
-            <div className="container-page pb-4">
-              <p className="kicker mb-2 text-muted-foreground">Markets</p>
-              <MarketsMobileList />
-            </div>
+            {headerFeatures.markets && (
+              <div className="container-page pb-4">
+                <p className="kicker mb-2 text-muted-foreground">Markets</p>
+                <MarketsMobileList />
+              </div>
+            )}
             <div className="container-page pb-4 md:hidden">
               <CurrencyToggle />
             </div>

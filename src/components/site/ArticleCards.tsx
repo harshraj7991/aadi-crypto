@@ -36,23 +36,35 @@ function Kicker({ article }: { article: ArticleSummary }) {
   );
 }
 
-/** The one big story at the top of a list. */
+/**
+ * The one big story at the top of a list.
+ *
+ * The image and the text rarely come out the same height, and the shorter
+ * side was left with a white gap. Both columns end in the story's own summary
+ * bullets, which only ever fill space and never add to it (see `.lead-points`
+ * in styles.css): the taller column has none to spare, so only the shorter
+ * side shows them.
+ */
 export function LeadStory({ article }: { article: ArticleSummary }) {
+  const points = article.summary;
   return (
     <article className="group grid gap-5 md:grid-cols-[1.1fr_1fr] md:items-start">
       {article.image && (
-        <Link to={article.url} className="block overflow-hidden rounded-sm bg-surface-cool">
-          <img
-            src={article.image.url}
-            alt={article.image.alt}
-            width={article.image.width}
-            height={article.image.height}
-            className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            loading="eager"
-          />
-        </Link>
+        <div className="flex flex-col md:self-stretch">
+          <Link to={article.url} className="block overflow-hidden rounded-sm bg-surface-cool">
+            <img
+              src={article.image.url}
+              alt={article.image.alt}
+              width={article.image.width}
+              height={article.image.height}
+              className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              loading="eager"
+            />
+          </Link>
+          <LeadPoints points={points} />
+        </div>
       )}
-      <div>
+      <div className="flex flex-col md:self-stretch">
         <Kicker article={article} />
         <h2 className="mt-2 text-[clamp(1.6rem,3vw,2.2rem)] font-extrabold leading-[1.14] text-ink">
           <Link to={article.url} className="hover:text-primary-hover">
@@ -65,8 +77,25 @@ export function LeadStory({ article }: { article: ArticleSummary }) {
           </p>
         )}
         <Byline article={article} className="mt-4" />
+        {article.image && <LeadPoints points={points} />}
       </div>
     </article>
+  );
+}
+
+function LeadPoints({ points }: { points: string[] }) {
+  if (points.length === 0) return null;
+  return (
+    <div className="lead-points hidden flex-1 md:block">
+      <section aria-label="Quick News Summary" className="summary-box">
+        <h3>Quick News Summary</h3>
+        <ul>
+          {points.map((point, i) => (
+            <li key={i}>{point}</li>
+          ))}
+        </ul>
+      </section>
+    </div>
   );
 }
 

@@ -13,6 +13,7 @@ export function stripTags(html: string): string {
     .replace(/&amp;/g, "&")
     .replace(/&#8217;/g, "’")
     .replace(/&#8220;|&#8221;/g, '"')
+    .replace(/&hellip;|&#8230;/g, "…") // WordPress ends auto-excerpts with "[&hellip;]"
     .replace(/\s{2,}/g, " ")
     .trim();
 }
