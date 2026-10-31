@@ -163,11 +163,14 @@ const SHARE_IMAGE_MAX_BYTES = 300_000;
 
 /**
  * The widest copy WordPress made that is still light enough for every chat
- * app's link preview. WordPress records each copy's file size, so nothing is
- * downloaded to decide. Copies with no recorded size are skipped; if none
- * qualify, the main image is used and the preview is no worse than before.
+ * app's link preview. WordPress (6.0+) records each copy's file size, so
+ * nothing is downloaded to decide. Copies with no recorded size are skipped.
+ *
+ * If none qualify — sizes missing on an old upload or from an image plugin —
+ * the 768px copy is used before the original: it is nearly always light
+ * enough, where the originals here are PNGs of 0.5–2 MB.
  */
-function pickShareImage(
+export function pickShareImage(
   sizes: Record<string, WpImageSize> | undefined,
   fallback: { url: string; width: number; height: number },
 ): { url: string; width: number; height: number } {
@@ -181,7 +184,14 @@ function pickShareImage(
     if (!url) continue;
     if (!best || size.width > best.width) best = { url, width: size.width, height: size.height };
   }
-  return best ?? fallback;
+  if (best) return best;
+
+  const mid = sizes?.["medium_large"];
+  const midUrl = mid?.source_url ? proxyImageUrl(mid.source_url) : null;
+  if (midUrl && mid?.width && mid.height)
+    return { url: midUrl, width: mid.width, height: mid.height };
+
+  return fallback;
 }
 
 /**
