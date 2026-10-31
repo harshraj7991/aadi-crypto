@@ -237,8 +237,12 @@ function toSummary(
 
 // --------------------------------------------------------------------- public
 
+// `content` is the heavy one, but without it a list cannot find the editors'
+// standfirst or summary bullets and falls back to WordPress's own excerpt,
+// which runs the "Quick News Summary" heading into the text. Only the parsed
+// pieces reach the browser, never the body.
 const LIST_FIELDS =
-  "id,slug,date_gmt,modified_gmt,title,excerpt,categories,tags,_links,author,featured_media";
+  "id,slug,date_gmt,modified_gmt,title,excerpt,content,categories,tags,_links,author,featured_media";
 
 /**
  * A category as WordPress actually has it, not as our static taxonomy expects.

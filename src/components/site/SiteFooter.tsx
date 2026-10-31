@@ -1,5 +1,6 @@
 import logo from "@/assets/aadicrypto-mark-light.svg";
 import { labelLink, SiteLink } from "./links";
+import { hiddenFooterLinks } from "@/data/site-features";
 
 const columns: Array<{ title: string; links: string[] }> = [
   {
@@ -19,6 +20,10 @@ const columns: Array<{ title: string; links: string[] }> = [
   { title: "Company", links: ["About", "Authors", "Careers", "Advertise", "Contact"] },
 ];
 
+const visibleColumns = columns
+  .map((col) => ({ ...col, links: col.links.filter((l) => !hiddenFooterLinks.has(l)) }))
+  .filter((col) => col.links.length > 0);
+
 const legal = [
   "Editorial Policy",
   "Corrections Policy",
@@ -26,13 +31,18 @@ const legal = [
   "Privacy",
   "Terms",
   "Risk Disclaimer",
-];
+].filter((l) => !hiddenFooterLinks.has(l));
 
+/**
+ * Brand on the left, link columns grouped on the right. The columns sit in a
+ * flex row rather than a fixed six-track grid, so hiding links never leaves
+ * empty tracks stranding the rest mid-page.
+ */
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-ink text-background">
       <div className="container-page py-10">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_3fr]">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2.5">
               <img
@@ -54,41 +64,45 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
-            {columns.map((col) => (
-              <div key={col.title}>
-                <h2 className="kicker text-background/60">{col.title}</h2>
-                <ul className="mt-3 space-y-2">
-                  {col.links.map((l) => (
-                    <li key={l}>
-                      <SiteLink
-                        target={labelLink(l)}
-                        className="text-[13px] text-background/85 hover:text-background"
-                      >
-                        {l}
-                      </SiteLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
+          {visibleColumns.length > 0 && (
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-16 gap-y-8 lg:gap-x-24">
+              {visibleColumns.map((col) => (
+                <div key={col.title} className="min-w-[7rem]">
+                  <h2 className="kicker text-background/60">{col.title}</h2>
+                  <ul className="mt-3 space-y-2">
+                    {col.links.map((l) => (
+                      <li key={l}>
+                        <SiteLink
+                          target={labelLink(l)}
+                          className="text-[13px] text-background/85 hover:text-background"
+                        >
+                          {l}
+                        </SiteLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </nav>
+          )}
         </div>
 
         <div className="mt-9 border-t border-background/15 pt-5">
-          <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {legal.map((l) => (
-              <li key={l}>
-                <SiteLink
-                  target={labelLink(l)}
-                  className="text-[12.5px] font-semibold text-background/85 hover:text-background"
-                >
-                  {l}
-                </SiteLink>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 max-w-[90ch] text-[12px] leading-relaxed text-background/60">
+          {legal.length > 0 && (
+            <ul className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
+              {legal.map((l) => (
+                <li key={l}>
+                  <SiteLink
+                    target={labelLink(l)}
+                    className="text-[12.5px] font-semibold text-background/85 hover:text-background"
+                  >
+                    {l}
+                  </SiteLink>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="max-w-[90ch] text-[12px] leading-relaxed text-background/60">
             Market data is provided for information only and is not investment advice. Prices come
             from third-party providers and may be delayed or incomplete. Crypto assets are volatile
             and unregulated in many jurisdictions. AadiCrypto never asks for seed phrases or private
